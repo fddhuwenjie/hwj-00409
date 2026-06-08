@@ -1,0 +1,126 @@
+{
+  "name": "order_details",
+  "subject": "订单明细 #{{ order_id }} - 共 {{ items|length }} 件商品",
+  "body": "{{> header}}\n\n# 订单明细\n\n您好 {{ user_name }}，\n\n以下是您的订单 #{{ order_id }} 的详细信息。\n\n## 订单概览\n\n| 项目 | 详情 |\n|------|------|\n| 订单号 | {{ order_id }} |\n| 下单时间 | {{ order_date }} |\n| 支付方式 | {{ payment_method }} |\n| 商品总数 | {{ items|length }} 件 |\n| 商品总金额 | ¥{{ total_amount }} |\n| 运费 | ¥{{ shipping_fee }} |\n| **实付金额** | **¥{{ total_amount + shipping_fee }}** |\n\n## 商品清单\n\n| 商品名称 | 单价 | 数量 | 小计 |\n|----------|------|------|------|\n{% for item in items %}\n| {{ item.name }} | ¥{{ item.price }} | {{ item.quantity }} | ¥{{ item.price * item.quantity }} |\n{% endfor %}\n\n{% if total_amount >= 1000 %}\n## 🎉 VIP 专享优惠\n\n您的订单金额超过 ¥1000，已自动升级为 VIP 客户！\n\n{% if user_level == 'gold' %}\n✨ **黄金会员**: 额外获得 500 积分奖励，可在下次购物时抵扣 ¥50。\n{% elif user_level == 'silver' %}\n✨ **白银会员**: 额外获得 200 积分奖励，可在下次购物时抵扣 ¥20。\n{% else %}\n✨ **普通会员**: 获得 100 积分奖励，升级到白银会员可享受更多优惠。\n{% endif %}\n\n{% if items|contains('iPhone') %}\n📱 **专属福利**: 购买 iPhone 系列产品，赠送价值 ¥199 的原装充电器。\n{% endif %}\n{% endif %}\n\n## 收货信息\n\n- **收货人**: {{ shipping_name }}\n- **电话**: {{ shipping_phone }}\n- **地址**: {{ shipping_address }}\n\n## 配送说明\n\n{% if total_amount >= 500 %}\n🚚 **免费配送**: 订单金额满 ¥500，已为您免除运费。\n{% else %}\n🚚 **普通配送**: 预计 3-5 个工作日送达。\n{% endif %}\n\n{% if has_gift %}\n🎁 **赠品信息**: 您的订单包含赠品，将随主商品一同配送。\n{% endif %}\n\n如有任何问题，请随时联系我们。\n\n{{> signature}}\n\n{{> footer}}",
+  "variables": [
+    {
+      "name": "user_name",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "company_name",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "recipient_email",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "order_id",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "order_date",
+      "type": "date",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "payment_method",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "total_amount",
+      "type": "number",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "shipping_fee",
+      "type": "number",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "items",
+      "type": "list",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "shipping_name",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "shipping_phone",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "shipping_address",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "user_level",
+      "type": "string",
+      "required": false,
+      "default": "normal"
+    },
+    {
+      "name": "has_gift",
+      "type": "string",
+      "required": false,
+      "default": "false"
+    },
+    {
+      "name": "sender_name",
+      "type": "string",
+      "required": false,
+      "default": "订单团队"
+    },
+    {
+      "name": "sender_title",
+      "type": "string",
+      "required": false,
+      "default": "订单管理员"
+    },
+    {
+      "name": "sender_email",
+      "type": "string",
+      "required": false,
+      "default": "orders@example.com"
+    },
+    {
+      "name": "sender_phone",
+      "type": "string",
+      "required": false,
+      "default": "400-888-8888"
+    },
+    {
+      "name": "year",
+      "type": "string",
+      "required": false,
+      "default": "2026"
+    }
+  ],
+  "created_at": "2026-06-08T11:18:56.969512",
+  "updated_at": "2026-06-08T11:18:56.969512",
+  "version": 1,
+  "layout": null,
+  "variants": []
+}

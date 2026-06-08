@@ -20,6 +20,9 @@ from bs4 import BeautifulSoup
 from tabulate import tabulate
 from colorama import init, Fore, Style, Back
 from premailer import Premailer
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import threading
+import urllib.parse
 
 init(autoreset=True)
 
@@ -33,6 +36,8 @@ VERSIONS_DIR = os.path.join(DATA_DIR, 'versions')
 SEND_LOG_FILE = os.path.join(DATA_DIR, 'send_log.json')
 AB_TEST_LOG_FILE = os.path.join(DATA_DIR, 'ab_test_log.json')
 STATS_FILE = os.path.join(DATA_DIR, 'stats.json')
+TRACKING_FILE = os.path.join(DATA_DIR, 'tracking.json')
+BLACKLIST_FILE = os.path.join(DATA_DIR, 'blacklist.json')
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'output')
 
 for d in [DATA_DIR, VERSIONS_DIR, OUTPUT_DIR]:
@@ -317,6 +322,18 @@ class FragmentInclude(Extension):
         return self.environment.fragment_loader.fragments.get(name, f'[片段未找到: {name}]')
 
 
+def contains(container: Any, value: Any) -> bool:
+    if container is None:
+        return False
+    if isinstance(container, dict):
+        return value in container
+    if isinstance(container, str):
+        return str(value) in container
+    if isinstance(container, (list, tuple, set)):
+        return value in container
+    return False
+
+
 def jinja_env(fragments: Dict[str, str]):
     env = Environment(
         loader=BaseLoader(),
@@ -326,6 +343,8 @@ def jinja_env(fragments: Dict[str, str]):
         keep_trailing_newline=True
     )
     env.fragment_loader = FragmentLoader(fragments)
+    env.filters['contains'] = contains
+    env.tests['contains'] = contains
     return env
 
 
@@ -535,6 +554,72 @@ def load_stats() -> Dict[str, Dict]:
 
 def save_stats(stats: Dict[str, Dict]):
     save_json(STATS_FILE, stats)
+
+
+def load_tracking() -> Dict[str, Any]:
+    return load_json(TRACKING_FILE, {'events': [], 'unsubscribed': []})
+
+
+def save_tracking(tracking: Dict[str, Any]):
+    save_json(TRACKING_FILE, tracking)
+
+
+def load_blacklist() -> List[str]:
+    return load_json(BLACKLIST_FILE, [])
+
+
+def save_blacklist(blacklist: List[str]):
+    save_json(BLACKLIST_FILE, blacklist)
+
+
+def is_blacklisted(email: str) -> bool:
+    blacklist = load_blacklist()
+    return email.lower() in [e.lower() for e in blacklist]
+
+
+def add_to_blacklist(email: str):
+    blacklist = load_blacklist()
+    if email.lower() not in [e.lower() for e in blacklist]:
+        blacklist.append(email.lower())
+        save_blacklist(blacklist)
+
+
+def generate_tracking_id(template_name: str, recipient_email: str) -> str:
+    raw = f'{template_name}:{recipient_email}:{datetime.now().isoformat()}'
+    return hashlib.md5(raw.encode('utf-8')).hexdigest()
+
+
+def inject_tracking(html_content: str, tracking_id: str, template_name: str, recipient_email: str) -> str:
+    tracking_pixel = f'<img src="http://localhost:9409/track/open/{tracking_id}" width="1" height="1" alt="" style="display:none;" />'
+    unsubscribe_link = f'<a href="http://localhost:9409/track/unsubscribe/{tracking_id}" style="color: #999; font-size: 12px;">退订此邮件</a>'
+
+    if '</body>' in html_content:
+        html_content = html_content.replace('</body>', tracking_pixel + '</body>')
+    else:
+        html_content += tracking_pixel
+
+    if '{{> footer}}' in html_content:
+        pass
+    elif '<div class="email-footer">' in html_content:
+        html_content = html_content.replace('<div class="email-footer">', '<div class="email-footer">' + unsubscribe_link + '<br/>')
+    elif '</body>' in html_content:
+        html_content = html_content.replace('</body>', '<div style="text-align: center; padding: 10px; font-size: 12px; color: #999;">' + unsubscribe_link + '</div></body>')
+    else:
+        html_content += '<div style="text-align: center; padding: 10px; font-size: 12px; color: #999;">' + unsubscribe_link + '</div>'
+
+    return html_content
+
+
+def log_tracking_event(tracking_id: str, event_type: str, template_name: str, recipient_email: str):
+    tracking = load_tracking()
+    tracking['events'].append({
+        'tracking_id': tracking_id,
+        'event_type': event_type,
+        'template': template_name,
+        'recipient': recipient_email,
+        'timestamp': datetime.now().isoformat()
+    })
+    save_tracking(tracking)
 
 
 def update_stats(template_name: str):
@@ -1274,6 +1359,103 @@ def generate_sample_data() -> tuple[Dict[str, Template], Dict[str, Fragment]]:
             created_at=now,
             updated_at=now,
             version=1
+        ),
+        'order_details': Template(
+            name='order_details',
+            subject='订单明细 #{{ order_id }} - 共 {{ items|length }} 件商品',
+            body='''{{> header}}
+
+# 订单明细
+
+您好 {{ user_name }}，
+
+以下是您的订单 #{{ order_id }} 的详细信息。
+
+## 订单概览
+
+| 项目 | 详情 |
+|------|------|
+| 订单号 | {{ order_id }} |
+| 下单时间 | {{ order_date }} |
+| 支付方式 | {{ payment_method }} |
+| 商品总数 | {{ items|length }} 件 |
+| 商品总金额 | ¥{{ total_amount }} |
+| 运费 | ¥{{ shipping_fee }} |
+| **实付金额** | **¥{{ total_amount + shipping_fee }}** |
+
+## 商品清单
+
+| 商品名称 | 单价 | 数量 | 小计 |
+|----------|------|------|------|
+{% for item in items %}
+| {{ item.name }} | ¥{{ item.price }} | {{ item.quantity }} | ¥{{ item.price * item.quantity }} |
+{% endfor %}
+
+{% if total_amount >= 1000 %}
+## 🎉 VIP 专享优惠
+
+您的订单金额超过 ¥1000，已自动升级为 VIP 客户！
+
+{% if user_level == 'gold' %}
+✨ **黄金会员**: 额外获得 500 积分奖励，可在下次购物时抵扣 ¥50。
+{% elif user_level == 'silver' %}
+✨ **白银会员**: 额外获得 200 积分奖励，可在下次购物时抵扣 ¥20。
+{% else %}
+✨ **普通会员**: 获得 100 积分奖励，升级到白银会员可享受更多优惠。
+{% endif %}
+
+{% if items|contains('iPhone') %}
+📱 **专属福利**: 购买 iPhone 系列产品，赠送价值 ¥199 的原装充电器。
+{% endif %}
+{% endif %}
+
+## 收货信息
+
+- **收货人**: {{ shipping_name }}
+- **电话**: {{ shipping_phone }}
+- **地址**: {{ shipping_address }}
+
+## 配送说明
+
+{% if total_amount >= 500 %}
+🚚 **免费配送**: 订单金额满 ¥500，已为您免除运费。
+{% else %}
+🚚 **普通配送**: 预计 3-5 个工作日送达。
+{% endif %}
+
+{% if has_gift %}
+🎁 **赠品信息**: 您的订单包含赠品，将随主商品一同配送。
+{% endif %}
+
+如有任何问题，请随时联系我们。
+
+{{> signature}}
+
+{{> footer}}''',
+            variables=[
+                Variable(name='user_name', type='string', required=True),
+                Variable(name='company_name', type='string', required=True),
+                Variable(name='recipient_email', type='string', required=True),
+                Variable(name='order_id', type='string', required=True),
+                Variable(name='order_date', type='date', required=True),
+                Variable(name='payment_method', type='string', required=True),
+                Variable(name='total_amount', type='number', required=True),
+                Variable(name='shipping_fee', type='number', required=True),
+                Variable(name='items', type='list', required=True),
+                Variable(name='shipping_name', type='string', required=True),
+                Variable(name='shipping_phone', type='string', required=True),
+                Variable(name='shipping_address', type='string', required=True),
+                Variable(name='user_level', type='string', required=False, default='normal'),
+                Variable(name='has_gift', type='string', required=False, default='false'),
+                Variable(name='sender_name', type='string', required=False, default='订单团队'),
+                Variable(name='sender_title', type='string', required=False, default='订单管理员'),
+                Variable(name='sender_email', type='string', required=False, default='orders@example.com'),
+                Variable(name='sender_phone', type='string', required=False, default='400-888-8888'),
+                Variable(name='year', type='string', required=False, default='2026')
+            ],
+            created_at=now,
+            updated_at=now,
+            version=1
         )
     }
 
@@ -1313,7 +1495,7 @@ def print_warning(msg: str):
 @click.option('--data-dir', default=None, help='数据目录路径')
 def cli(data_dir):
     if data_dir:
-        global DATA_DIR, TEMPLATES_FILE, FRAGMENTS_FILE, LAYOUTS_FILE, VERSIONS_DIR, SCHEDULES_FILE, SCHEDULE_HISTORY_FILE, SEND_LOG_FILE, AB_TEST_LOG_FILE, STATS_FILE
+        global DATA_DIR, TEMPLATES_FILE, FRAGMENTS_FILE, LAYOUTS_FILE, VERSIONS_DIR, SCHEDULES_FILE, SCHEDULE_HISTORY_FILE, SEND_LOG_FILE, AB_TEST_LOG_FILE, STATS_FILE, TRACKING_FILE, BLACKLIST_FILE
         DATA_DIR = data_dir
         TEMPLATES_FILE = os.path.join(DATA_DIR, 'templates.json')
         FRAGMENTS_FILE = os.path.join(DATA_DIR, 'fragments.json')
@@ -1324,6 +1506,8 @@ def cli(data_dir):
         SEND_LOG_FILE = os.path.join(DATA_DIR, 'send_log.json')
         AB_TEST_LOG_FILE = os.path.join(DATA_DIR, 'ab_test_log.json')
         STATS_FILE = os.path.join(DATA_DIR, 'stats.json')
+        TRACKING_FILE = os.path.join(DATA_DIR, 'tracking.json')
+        BLACKLIST_FILE = os.path.join(DATA_DIR, 'blacklist.json')
         for d in [DATA_DIR, VERSIONS_DIR]:
             os.makedirs(d, exist_ok=True)
     init_sample_data()
@@ -1610,6 +1794,54 @@ def template_delete(name, force):
     print_success(f'模板 "{name}" 已删除')
 
 
+@template.command('history', help='查看模板版本历史')
+@click.argument('name')
+def template_history(name):
+    templates = load_templates()
+    if name not in templates:
+        print_error(f'模板 "{name}" 不存在')
+        return
+
+    versions = load_versions(name)
+    if not versions:
+        print_info('没有历史版本。')
+        return
+
+    headers = ['版本', '创建时间', '主题变更行数', '正文变更行数']
+    rows = []
+
+    prev_body = None
+    prev_subject = None
+
+    for v_num in versions:
+        v = load_version(name, v_num)
+        if not v:
+            continue
+
+        body_changes = 0
+        subject_changes = 0
+
+        if prev_body is not None:
+            body_diff = list(difflib.unified_diff(prev_body.splitlines(), v.body.splitlines()))
+            body_changes = len([l for l in body_diff if l.startswith('+') or l.startswith('-')])
+
+        if prev_subject is not None:
+            subject_diff = list(difflib.unified_diff(prev_subject.splitlines(), v.subject.splitlines()))
+            subject_changes = len([l for l in subject_diff if l.startswith('+') or l.startswith('-')])
+
+        rows.append([
+            Fore.CYAN + f'v{v_num}' + Style.RESET_ALL,
+            v.updated_at[:19].replace('T', ' '),
+            subject_changes if subject_changes > 0 else '-',
+            body_changes if body_changes > 0 else '-'
+        ])
+
+        prev_body = v.body
+        prev_subject = v.subject
+
+    click.echo(tabulate(rows, headers=headers, tablefmt='pretty'))
+
+
 @template.command('diff', help='对比两个版本')
 @click.argument('name')
 @click.argument('version1', type=int)
@@ -1629,18 +1861,69 @@ def template_diff(name, version1, version2):
         text2 = getattr(v2, field).splitlines(keepends=True)
 
         if text1 != text2:
-            click.echo(Fore.CYAN + f'=== {field} 差异 (v{version1} vs v{version2}) ===')
-            diff = difflib.unified_diff(text1, text2, fromfile=f'v{version1}', tofile=f'v{version2}')
+            click.echo(Fore.CYAN + f'=== {field} 差异 (v{version1} → v{version2}) ===')
+            diff = difflib.unified_diff(
+                text1, text2,
+                fromfile=f'v{version1}/{field}',
+                tofile=f'v{version2}/{field}',
+                lineterm=''
+            )
             for line in diff:
-                if line.startswith('+'):
-                    click.echo(Fore.GREEN + line.rstrip())
+                if line.startswith('+++') or line.startswith('---'):
+                    click.echo(Fore.CYAN + line)
+                elif line.startswith('+'):
+                    click.echo(Fore.GREEN + line)
                 elif line.startswith('-'):
-                    click.echo(Fore.RED + line.rstrip())
-                elif line.startswith('@'):
-                    click.echo(Fore.CYAN + line.rstrip())
+                    click.echo(Fore.RED + line)
+                elif line.startswith('@@'):
+                    click.echo(Fore.MAGENTA + line)
                 else:
-                    click.echo(line.rstrip())
+                    click.echo(line)
             click.echo()
+        else:
+            click.echo(Fore.YELLOW + f'=== {field} 无差异 ===')
+            click.echo()
+
+
+@template.command('rollback', help='回滚到指定版本')
+@click.argument('name')
+@click.argument('target_version', type=int)
+@click.option('--force', is_flag=True, help='不提示确认')
+def template_rollback(name, target_version, force):
+    templates = load_templates()
+    if name not in templates:
+        print_error(f'模板 "{name}" 不存在')
+        return
+
+    current = templates[name]
+    target = load_version(name, target_version)
+    if not target:
+        print_error(f'版本 {target_version} 不存在')
+        return
+
+    if not force:
+        click.echo(Fore.YELLOW + f'当前版本: v{current.version}')
+        click.echo(Fore.YELLOW + f'回滚目标: v{target_version}')
+        click.echo(Fore.CYAN + '将创建新版本 v{0} 内容等同于 v{1}'.format(current.version + 1, target_version))
+        if not click.confirm('确认回滚？'):
+            print_info('操作已取消')
+            return
+
+    old_version = current.version
+
+    current.subject = target.subject
+    current.body = target.body
+    current.variables = [Variable.from_dict(v.to_dict()) for v in target.variables]
+    current.variants = [Variant.from_dict(v.to_dict()) for v in target.variants]
+    current.layout = target.layout
+    current.version += 1
+    current.updated_at = datetime.now().isoformat()
+
+    save_templates(templates)
+    save_version(current)
+
+    print_success(f'已回滚到 v{target_version}，创建新版本 v{current.version}')
+    print_info(f'原版本 v{old_version} 仍保留在历史记录中')
 
 
 @cli.command('render', help='渲染模板')
@@ -1714,7 +1997,15 @@ def render(template_name, output_format, theme, vars_opt, var_file, csv, output,
         for v in vars_opt:
             if '=' in v:
                 k, val = v.split('=', 1)
-                variables[k.strip()] = val.strip()
+                k = k.strip()
+                val = val.strip()
+                try:
+                    if val.startswith('[') or val.startswith('{'):
+                        variables[k] = json.loads(val)
+                    else:
+                        variables[k] = val
+                except json.JSONDecodeError:
+                    variables[k] = val
 
     rendered_subject, rendered_body, used_layout = render_template(t, variables, fragments, variant=variant, layouts=layouts)
     update_stats(template_name)
@@ -1758,7 +2049,15 @@ def preview(template_name, vars_opt, var_file, variant):
         for v in vars_opt:
             if '=' in v:
                 k, val = v.split('=', 1)
-                variables[k.strip()] = val.strip()
+                k = k.strip()
+                val = val.strip()
+                try:
+                    if val.startswith('[') or val.startswith('{'):
+                        variables[k] = json.loads(val)
+                    else:
+                        variables[k] = val
+                except json.JSONDecodeError:
+                    variables[k] = val
 
     rendered_subject, rendered_body, _ = render_template(t, variables, fragments, variant=variant, layouts=layouts)
 
@@ -1851,12 +2150,19 @@ def send(template_name, recipients, theme, output_dir, variant, ab_test):
         for v in t.variants:
             variant_stats[v.name] = {'sent': 0, 'failed': 0}
 
+    tracking_data = []
+
     for i, record in enumerate(records, 1):
         if 'recipient_email' not in record:
             print_warning(f'记录 {i} 缺少 recipient_email 字段，跳过')
             continue
 
         email = record['recipient_email']
+
+        if is_blacklisted(email):
+            print_warning(f'[{i}/{len(records)}] {email} - 已退订，跳过')
+            continue
+
         current_variant = variant
         if ab_test:
             selected = select_variant_by_weight(t.variants)
@@ -1869,6 +2175,16 @@ def send(template_name, recipients, theme, output_dir, variant, ab_test):
             else:
                 content = markdown_to_html_email(rendered_body, rendered_subject, theme)
 
+            tracking_id = generate_tracking_id(template_name, email)
+            content = inject_tracking(content, tracking_id, template_name, email)
+
+            tracking_data.append({
+                'tracking_id': tracking_id,
+                'template': template_name,
+                'recipient': email,
+                'sent_at': datetime.now().isoformat()
+            })
+
             safe_email = email.replace('@', '_at_').replace('.', '_dot_')
             variant_suffix = f'_{current_variant}' if current_variant else ''
             out_path = os.path.join(batch_dir, f'{safe_email}{variant_suffix}.html')
@@ -1878,6 +2194,7 @@ def send(template_name, recipients, theme, output_dir, variant, ab_test):
             output_files.append(out_path)
             record_with_variant = dict(record)
             record_with_variant['_variant'] = current_variant
+            record_with_variant['_tracking_id'] = tracking_id
             sent_recipients.append(record_with_variant)
 
             if current_variant and current_variant in variant_stats:
@@ -1889,6 +2206,11 @@ def send(template_name, recipients, theme, output_dir, variant, ab_test):
             if current_variant and current_variant in variant_stats:
                 variant_stats[current_variant]['failed'] += 1
             click.echo(f'[{i}/{len(records)}] {Fore.RED}✗{Style.RESET_ALL} {email} - 错误: {e}')
+
+    if tracking_data:
+        tracking = load_tracking()
+        tracking.setdefault('sent', []).extend(tracking_data)
+        save_tracking(tracking)
 
     log_send(template_name, sent_recipients, output_files, variant=variant if not ab_test else None, variant_stats=variant_stats if ab_test else None)
 
@@ -2310,12 +2632,19 @@ def execute_schedule(schedule: Schedule) -> Dict:
         for v in t.variants:
             variant_stats[v.name] = {'sent': 0, 'failed': 0}
 
+    tracking_data = []
+
     for i, record in enumerate(records, 1):
         if 'recipient_email' not in record:
             failed_count += 1
             continue
 
         email = record['recipient_email']
+
+        if is_blacklisted(email):
+            failed_count += 1
+            continue
+
         current_variant = schedule.variant
         if schedule.ab_test:
             selected = select_variant_by_weight(t.variants)
@@ -2330,6 +2659,16 @@ def execute_schedule(schedule: Schedule) -> Dict:
             else:
                 content = markdown_to_html_email(rendered_body, rendered_subject, schedule.theme)
 
+            tracking_id = generate_tracking_id(schedule.template_name, email)
+            content = inject_tracking(content, tracking_id, schedule.template_name, email)
+
+            tracking_data.append({
+                'tracking_id': tracking_id,
+                'template': schedule.template_name,
+                'recipient': email,
+                'sent_at': datetime.now().isoformat()
+            })
+
             safe_email = email.replace('@', '_at_').replace('.', '_dot_')
             variant_suffix = f'_{current_variant}' if current_variant else ''
             out_path = os.path.join(batch_dir, f'{safe_email}{variant_suffix}.html')
@@ -2343,6 +2682,11 @@ def execute_schedule(schedule: Schedule) -> Dict:
             failed_count += 1
             if current_variant and current_variant in variant_stats:
                 variant_stats[current_variant]['failed'] += 1
+
+    if tracking_data:
+        tracking = load_tracking()
+        tracking.setdefault('sent', []).extend(tracking_data)
+        save_tracking(tracking)
 
     if schedule.ab_test and variant_stats:
         log_ab_test(schedule.template_name, variant_stats)
@@ -2604,6 +2948,249 @@ def schedule_disable(schedule_id):
     schedules[schedule_id].enabled = False
     save_schedules(schedules)
     print_success(f'任务 "{schedules[schedule_id].name}" 已禁用')
+
+
+class TrackingHandler(BaseHTTPRequestHandler):
+    def log_message(self, format, *args):
+        pass
+
+    def do_GET(self):
+        parsed = urllib.parse.urlparse(self.path)
+        path = parsed.path
+
+        if path.startswith('/track/open/'):
+            tracking_id = path.replace('/track/open/', '')
+            self._handle_open(tracking_id)
+        elif path.startswith('/track/unsubscribe/'):
+            tracking_id = path.replace('/track/unsubscribe/', '')
+            self._handle_unsubscribe(tracking_id)
+        elif path == '/track/status':
+            self._handle_status()
+        else:
+            self.send_response(404)
+            self.end_headers()
+            self.wfile.write(b'Not Found')
+
+    def _handle_open(self, tracking_id):
+        tracking = load_tracking()
+        sent_records = tracking.get('sent', [])
+        record = next((r for r in sent_records if r['tracking_id'] == tracking_id), None)
+
+        if record:
+            existing = next((e for e in tracking.get('events', [])
+                           if e['tracking_id'] == tracking_id and e['event_type'] == 'open'), None)
+            if not existing:
+                tracking['events'].append({
+                    'tracking_id': tracking_id,
+                    'event_type': 'open',
+                    'template': record['template'],
+                    'recipient': record['recipient'],
+                    'timestamp': datetime.now().isoformat()
+                })
+                save_tracking(tracking)
+                click.echo(Fore.GREEN + f'📧 邮件打开: {record["recipient"]} (模板: {record["template"]})')
+
+        pixel = b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00\x21\xf9\x04\x01\x00\x00\x00\x00\x2c\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02\x44\x01\x00\x3b'
+        self.send_response(200)
+        self.send_header('Content-Type', 'image/gif')
+        self.send_header('Content-Length', len(pixel))
+        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
+        self.send_header('Pragma', 'no-cache')
+        self.end_headers()
+        self.wfile.write(pixel)
+
+    def _handle_unsubscribe(self, tracking_id):
+        tracking = load_tracking()
+        sent_records = tracking.get('sent', [])
+        record = next((r for r in sent_records if r['tracking_id'] == tracking_id), None)
+
+        if record:
+            email = record['recipient']
+            add_to_blacklist(email)
+
+            existing = next((e for e in tracking.get('events', [])
+                           if e['tracking_id'] == tracking_id and e['event_type'] == 'unsubscribe'), None)
+            if not existing:
+                tracking['events'].append({
+                    'tracking_id': tracking_id,
+                    'event_type': 'unsubscribe',
+                    'template': record['template'],
+                    'recipient': email,
+                    'timestamp': datetime.now().isoformat()
+                })
+                save_tracking(tracking)
+                click.echo(Fore.RED + f'🚫 退订: {email} (模板: {record["template"]})')
+
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/html; charset=utf-8')
+        self.end_headers()
+        response = '''
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="UTF-8"><title>退订成功</title></head>
+        <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+            <h1 style="color: #333;">退订成功</h1>
+            <p style="color: #666;">您已成功退订，将不再收到此类邮件。</p>
+        </body>
+        </html>
+        '''
+        self.wfile.write(response.encode('utf-8'))
+
+    def _handle_status(self):
+        tracking = load_tracking()
+        sent_count = len(tracking.get('sent', []))
+        open_count = len([e for e in tracking.get('events', []) if e['event_type'] == 'open'])
+        unsubscribe_count = len([e for e in tracking.get('events', []) if e['event_type'] == 'unsubscribe'])
+        blacklist_count = len(load_blacklist())
+
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.end_headers()
+        status = json.dumps({
+            'sent': sent_count,
+            'opened': open_count,
+            'unsubscribed': unsubscribe_count,
+            'blacklist': blacklist_count
+        }, ensure_ascii=False)
+        self.wfile.write(status.encode('utf-8'))
+
+
+@cli.group(help='邮件追踪与退订管理')
+def track():
+    pass
+
+
+@track.command('start', help='启动追踪HTTP服务 (端口9409)')
+@click.option('--port', type=int, default=9409, help='服务端口')
+def track_start(port):
+    try:
+        server = HTTPServer(('0.0.0.0', port), TrackingHandler)
+        click.echo(Fore.GREEN + f'🚀 追踪服务已启动，监听端口 {port}')
+        click.echo(Fore.CYAN + f'   打开追踪: http://localhost:{port}/track/open/<tracking_id>')
+        click.echo(Fore.CYAN + f'   退订链接: http://localhost:{port}/track/unsubscribe/<tracking_id>')
+        click.echo(Fore.CYAN + f'   状态查询: http://localhost:{port}/track/status')
+        click.echo(Fore.YELLOW + '按 Ctrl+C 停止服务')
+        click.echo()
+
+        server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+        server_thread.start()
+
+        while True:
+            import time
+            time.sleep(1)
+    except KeyboardInterrupt:
+        click.echo()
+        print_info('追踪服务已停止')
+    except OSError as e:
+        print_error(f'端口 {port} 已被占用: {e}')
+
+
+@track.command('report', help='查看追踪统计报告')
+@click.option('--template', 'template_name', required=False, help='指定模板名称')
+def track_report(template_name):
+    tracking = load_tracking()
+    sent_records = tracking.get('sent', [])
+    events = tracking.get('events', [])
+
+    if template_name:
+        sent_records = [s for s in sent_records if s['template'] == template_name]
+        events = [e for e in events if e['template'] == template_name]
+        if not sent_records:
+            print_info(f'模板 "{template_name}" 没有发送记录。')
+            return
+
+    template_stats = {}
+    for s in sent_records:
+        tpl = s['template']
+        if tpl not in template_stats:
+            template_stats[tpl] = {'sent': 0, 'opened': 0, 'unsubscribed': 0, 'recipients': set()}
+        template_stats[tpl]['sent'] += 1
+        template_stats[tpl]['recipients'].add(s['recipient'])
+
+    for e in events:
+        tpl = e['template']
+        if tpl not in template_stats:
+            template_stats[tpl] = {'sent': 0, 'opened': 0, 'unsubscribed': 0, 'recipients': set()}
+        if e['event_type'] == 'open':
+            template_stats[tpl]['opened'] += 1
+        elif e['event_type'] == 'unsubscribe':
+            template_stats[tpl]['unsubscribed'] += 1
+
+    click.echo(Fore.CYAN + '=== 邮件追踪统计报告 ===')
+    click.echo()
+
+    headers = ['模板', '发送数', '打开数', '打开率', '退订数', '退订率']
+    rows = []
+    total_sent = 0
+    total_opened = 0
+    total_unsubscribed = 0
+
+    for tpl_name, stats in sorted(template_stats.items()):
+        sent = stats['sent']
+        opened = stats['opened']
+        unsubscribed = stats['unsubscribed']
+        open_rate = (opened / sent * 100) if sent > 0 else 0
+        unsubscribe_rate = (unsubscribed / sent * 100) if sent > 0 else 0
+
+        total_sent += sent
+        total_opened += opened
+        total_unsubscribed += unsubscribed
+
+        open_rate_color = Fore.GREEN if open_rate >= 30 else (Fore.YELLOW if open_rate >= 10 else Fore.RED)
+        unsub_color = Fore.RED if unsubscribe_rate > 5 else Fore.GREEN
+
+        rows.append([
+            Fore.CYAN + tpl_name + Style.RESET_ALL,
+            sent,
+            opened,
+            open_rate_color + f'{open_rate:.1f}%' + Style.RESET_ALL,
+            unsubscribed,
+            unsub_color + f'{unsubscribe_rate:.1f}%' + Style.RESET_ALL
+        ])
+
+    click.echo(tabulate(rows, headers=headers, tablefmt='pretty'))
+    click.echo()
+
+    total_open_rate = (total_opened / total_sent * 100) if total_sent > 0 else 0
+    total_unsub_rate = (total_unsubscribed / total_sent * 100) if total_sent > 0 else 0
+
+    click.echo(Fore.YELLOW + f'总计: 发送 {total_sent} 封，打开 {total_opened} 封 (打开率: {total_open_rate:.1f}%)，退订 {total_unsubscribed} 封 (退订率: {total_unsub_rate:.1f}%)')
+    click.echo(Fore.YELLOW + f'黑名单: {len(load_blacklist())} 个邮箱')
+
+
+@track.command('blacklist', help='黑名单管理')
+@click.option('--add', 'add_email', required=False, help='添加邮箱到黑名单')
+@click.option('--remove', 'remove_email', required=False, help='从黑名单移除邮箱')
+@click.option('--list', 'show_list', is_flag=True, help='列出黑名单')
+def track_blacklist(add_email, remove_email, show_list):
+    blacklist = load_blacklist()
+
+    if add_email:
+        if add_email.lower() in [e.lower() for e in blacklist]:
+            print_warning(f'邮箱 "{add_email}" 已在黑名单中')
+        else:
+            add_to_blacklist(add_email)
+            print_success(f'已添加 "{add_email}" 到黑名单')
+        return
+
+    if remove_email:
+        blacklist = [e for e in blacklist if e.lower() != remove_email.lower()]
+        save_blacklist(blacklist)
+        print_success(f'已从黑名单移除 "{remove_email}"')
+        return
+
+    if show_list or not (add_email or remove_email):
+        if not blacklist:
+            print_info('黑名单为空。')
+            return
+
+        headers = ['序号', '邮箱']
+        rows = []
+        for i, email in enumerate(sorted(blacklist), 1):
+            rows.append([i, Fore.RED + email + Style.RESET_ALL])
+
+        click.echo(Fore.CYAN + f'=== 黑名单 ({len(blacklist)} 个) ===')
+        click.echo(tabulate(rows, headers=headers, tablefmt='pretty'))
 
 
 if __name__ == '__main__':

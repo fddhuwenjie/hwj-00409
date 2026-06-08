@@ -1,0 +1,60 @@
+{
+  "events": [],
+  "unsubscribed": [],
+  "sent": [
+    {
+      "tracking_id": "8e7cc8b215ecd66fbe11f0d02170ef09",
+      "template": "welcome",
+      "recipient": "alice@example.com",
+      "sent_at": "2026-06-08T11:20:15.170909"
+    },
+    {
+      "tracking_id": "4e2416d33175cb9372090d83907a30f0",
+      "template": "welcome",
+      "recipient": "bob@example.com",
+      "sent_at": "2026-06-08T11:20:15.178283"
+    },
+    {
+      "tracking_id": "cf031ed95e2166d6a1e9434ab4281794",
+      "template": "welcome",
+      "recipient": "charlie@example.com",
+      "sent_at": "2026-06-08T11:20:15.184318"
+    },
+    {
+      "tracking_id": "ed3d421ddfce0d8c34cfba9a1b1ded9c",
+      "template": "welcome",
+      "recipient": "david@example.com",
+      "sent_at": "2026-06-08T11:20:15.189836"
+    },
+    {
+      "tracking_id": "fc648daffe72858305a7cb01831f8d81",
+      "template": "welcome",
+      "recipient": "eve@example.com",
+      "sent_at": "2026-06-08T11:20:15.195992"
+    },
+    {
+      "tracking_id": "b8f20a91a57bbff9e89d149c20024cc9",
+      "template": "welcome",
+      "recipient": "bob@example.com",
+      "sent_at": "2026-06-08T11:21:02.271862"
+    },
+    {
+      "tracking_id": "582d11ff68097f7944cc94faba456c4f",
+      "template": "welcome",
+      "recipient": "charlie@example.com",
+      "sent_at": "2026-06-08T11:21:02.277730"
+    },
+    {
+      "tracking_id": "76bbbb2db3252bbe563ac8b7a83982a0",
+      "template": "welcome",
+      "recipient": "david@example.com",
+      "sent_at": "2026-06-08T11:21:02.284566"
+    },
+    {
+      "tracking_id": "7eb108c2efe2fa225f96cbe49df9d4d1",
+      "template": "welcome",
+      "recipient": "eve@example.com",
+      "sent_at": "2026-06-08T11:21:02.290187"
+    }
+  ]
+}
