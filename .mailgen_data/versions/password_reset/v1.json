@@ -1,0 +1,76 @@
+{
+  "name": "password_reset",
+  "subject": "密码重置请求 - {{ company_name }}",
+  "body": "{{> header}}\n\n# 密码重置\n\n您好 {{ user_name }}，\n\n我们收到了您的密码重置请求。\n\n## 重置链接\n\n请点击下面的按钮重置您的密码：\n\n<a href=\"{{ reset_link }}\" class=\"btn\">重置密码</a>\n\n或者复制以下链接到浏览器：\n`{{ reset_link }}`\n\n**注意**: 此链接将在 {{ expire_hours }} 小时后过期。\n\n{% if not requested_by_user %}\n> ⚠️ **安全提示**: 如果您没有发起此请求，请忽略此邮件并联系客服。\n{% endif %}\n\n如果您在使用过程中遇到任何问题，请联系我们。\n\n{{> signature}}\n\n{{> footer}}",
+  "variables": [
+    {
+      "name": "user_name",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "company_name",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "recipient_email",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "reset_link",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "expire_hours",
+      "type": "number",
+      "required": false,
+      "default": 24
+    },
+    {
+      "name": "requested_by_user",
+      "type": "string",
+      "required": false,
+      "default": "true"
+    },
+    {
+      "name": "sender_name",
+      "type": "string",
+      "required": false,
+      "default": "安全团队"
+    },
+    {
+      "name": "sender_title",
+      "type": "string",
+      "required": false,
+      "default": "安全工程师"
+    },
+    {
+      "name": "sender_email",
+      "type": "string",
+      "required": false,
+      "default": "security@example.com"
+    },
+    {
+      "name": "sender_phone",
+      "type": "string",
+      "required": false,
+      "default": "400-888-8888"
+    },
+    {
+      "name": "year",
+      "type": "string",
+      "required": false,
+      "default": "2026"
+    }
+  ],
+  "created_at": "2026-06-08T09:39:05.209293",
+  "updated_at": "2026-06-08T09:39:05.209293",
+  "version": 1
+}

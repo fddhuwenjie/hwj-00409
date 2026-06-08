@@ -1,0 +1,20 @@
+{
+  "header": {
+    "name": "header",
+    "content": "<div style=\"background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; color: white; border-radius: 8px 8px 0 0;\">\n    <h2 style=\"margin: 0; font-size: 20px;\">{{ company_name }}</h2>\n</div>",
+    "created_at": "2026-06-08T09:39:05.209238",
+    "updated_at": "2026-06-08T09:39:05.209264"
+  },
+  "footer": {
+    "name": "footer",
+    "content": "<div style=\"padding: 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #64748b;\">\n    <p>© {{ year }} {{ company_name }}. 保留所有权利。</p>\n    <p>如有任何问题，请联系 <a href=\"mailto:support@example.com\" style=\"color: #3b82f6;\">support@example.com</a></p>\n    <p style=\"margin-top: 8px; font-size: 11px;\">本邮件发送至 {{ recipient_email }}，如果您不想继续收到此类邮件，请<a href=\"#\" style=\"color: #3b82f6;\">退订</a>。</p>\n</div>",
+    "created_at": "2026-06-08T09:39:05.209279",
+    "updated_at": "2026-06-08T09:39:05.209281"
+  },
+  "signature": {
+    "name": "signature",
+    "content": "<div style=\"margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0;\">\n    <p style=\"margin: 4px 0;\"><strong>{{ sender_name }}</strong></p>\n    <p style=\"margin: 4px 0; color: #64748b;\">{{ sender_title }}</p>\n    <p style=\"margin: 4px 0; color: #64748b;\">{{ company_name }}</p>\n    <p style=\"margin: 4px 0; font-size: 12px;\">📧 {{ sender_email }} | 📱 {{ sender_phone }}</p>\n</div>",
+    "created_at": "2026-06-08T09:39:05.209283",
+    "updated_at": "2026-06-08T09:39:05.209291"
+  }
+}

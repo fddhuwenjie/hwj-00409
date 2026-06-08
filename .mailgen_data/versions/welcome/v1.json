@@ -1,0 +1,82 @@
+{
+  "name": "welcome",
+  "subject": "欢迎加入 {{ company_name }}，{{ user_name }}！",
+  "body": "{{> header}}\n\n# 欢迎加入我们！\n\n亲爱的 {{ user_name }}，\n\n欢迎您加入 **{{ company_name }}**！我们非常高兴您成为我们团队的一员。\n\n## 您的账户信息\n\n- **用户名**: {{ user_name }}\n- **邮箱**: {{ recipient_email }}\n- **注册日期**: {{ register_date }}\n\n## 下一步操作\n\n1. **完善个人资料** - 登录您的账户，补充个人信息\n2. **开始探索** - 浏览我们的功能和服务\n3. **获取帮助** - 如有任何问题，请查看帮助中心\n\n{% if has_trial %}\n🎁 **新手福利**: 您已获得 {{ trial_days }} 天免费试用期，截止到 {{ trial_end_date }}。\n{% endif %}\n\n如果您有任何疑问，随时联系我们的客服团队。\n\n{{> signature}}\n\n{{> footer}}",
+  "variables": [
+    {
+      "name": "user_name",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "company_name",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "recipient_email",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "register_date",
+      "type": "date",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "has_trial",
+      "type": "string",
+      "required": false,
+      "default": "false"
+    },
+    {
+      "name": "trial_days",
+      "type": "number",
+      "required": false,
+      "default": 7
+    },
+    {
+      "name": "trial_end_date",
+      "type": "date",
+      "required": false,
+      "default": ""
+    },
+    {
+      "name": "sender_name",
+      "type": "string",
+      "required": false,
+      "default": "客服团队"
+    },
+    {
+      "name": "sender_title",
+      "type": "string",
+      "required": false,
+      "default": "客户成功经理"
+    },
+    {
+      "name": "sender_email",
+      "type": "string",
+      "required": false,
+      "default": "welcome@example.com"
+    },
+    {
+      "name": "sender_phone",
+      "type": "string",
+      "required": false,
+      "default": "400-888-8888"
+    },
+    {
+      "name": "year",
+      "type": "string",
+      "required": false,
+      "default": "2026"
+    }
+  ],
+  "created_at": "2026-06-08T09:39:05.209293",
+  "updated_at": "2026-06-08T09:39:05.209293",
+  "version": 1
+}

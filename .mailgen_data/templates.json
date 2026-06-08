@@ -1,0 +1,520 @@
+{
+  "welcome": {
+    "name": "welcome",
+    "subject": "欢迎加入 {{ company_name }}，{{ user_name }}！",
+    "body": "{{> header}}\n\n# 欢迎加入我们！\n\n亲爱的 {{ user_name }}，\n\n欢迎您加入 **{{ company_name }}**！我们非常高兴您成为我们团队的一员。\n\n## 您的账户信息\n\n- **用户名**: {{ user_name }}\n- **邮箱**: {{ recipient_email }}\n- **注册日期**: {{ register_date }}\n\n## 下一步操作\n\n1. **完善个人资料** - 登录您的账户，补充个人信息\n2. **开始探索** - 浏览我们的功能和服务\n3. **获取帮助** - 如有任何问题，请查看帮助中心\n\n{% if has_trial %}\n🎁 **新手福利**: 您已获得 {{ trial_days }} 天免费试用期，截止到 {{ trial_end_date }}。\n{% endif %}\n\n如果您有任何疑问，随时联系我们的客服团队。\n\n{{> signature}}\n\n{{> footer}}",
+    "variables": [
+      {
+        "name": "user_name",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "company_name",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "recipient_email",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "register_date",
+        "type": "date",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "has_trial",
+        "type": "string",
+        "required": false,
+        "default": "false"
+      },
+      {
+        "name": "trial_days",
+        "type": "number",
+        "required": false,
+        "default": 7
+      },
+      {
+        "name": "trial_end_date",
+        "type": "date",
+        "required": false,
+        "default": ""
+      },
+      {
+        "name": "sender_name",
+        "type": "string",
+        "required": false,
+        "default": "客服团队"
+      },
+      {
+        "name": "sender_title",
+        "type": "string",
+        "required": false,
+        "default": "客户成功经理"
+      },
+      {
+        "name": "sender_email",
+        "type": "string",
+        "required": false,
+        "default": "welcome@example.com"
+      },
+      {
+        "name": "sender_phone",
+        "type": "string",
+        "required": false,
+        "default": "400-888-8888"
+      },
+      {
+        "name": "year",
+        "type": "string",
+        "required": false,
+        "default": "2026"
+      }
+    ],
+    "created_at": "2026-06-08T09:39:05.209293",
+    "updated_at": "2026-06-08T09:39:05.209293",
+    "version": 1
+  },
+  "password_reset": {
+    "name": "password_reset",
+    "subject": "密码重置请求 - {{ company_name }}",
+    "body": "{{> header}}\n\n# 密码重置\n\n您好 {{ user_name }}，\n\n我们收到了您的密码重置请求。\n\n## 重置链接\n\n请点击下面的按钮重置您的密码：\n\n<a href=\"{{ reset_link }}\" class=\"btn\">重置密码</a>\n\n或者复制以下链接到浏览器：\n`{{ reset_link }}`\n\n**注意**: 此链接将在 {{ expire_hours }} 小时后过期。\n\n{% if not requested_by_user %}\n> ⚠️ **安全提示**: 如果您没有发起此请求，请忽略此邮件并联系客服。\n{% endif %}\n\n如果您在使用过程中遇到任何问题，请联系我们。\n\n{{> signature}}\n\n{{> footer}}",
+    "variables": [
+      {
+        "name": "user_name",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "company_name",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "recipient_email",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "reset_link",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "expire_hours",
+        "type": "number",
+        "required": false,
+        "default": 24
+      },
+      {
+        "name": "requested_by_user",
+        "type": "string",
+        "required": false,
+        "default": "true"
+      },
+      {
+        "name": "sender_name",
+        "type": "string",
+        "required": false,
+        "default": "安全团队"
+      },
+      {
+        "name": "sender_title",
+        "type": "string",
+        "required": false,
+        "default": "安全工程师"
+      },
+      {
+        "name": "sender_email",
+        "type": "string",
+        "required": false,
+        "default": "security@example.com"
+      },
+      {
+        "name": "sender_phone",
+        "type": "string",
+        "required": false,
+        "default": "400-888-8888"
+      },
+      {
+        "name": "year",
+        "type": "string",
+        "required": false,
+        "default": "2026"
+      }
+    ],
+    "created_at": "2026-06-08T09:39:05.209293",
+    "updated_at": "2026-06-08T09:39:05.209293",
+    "version": 1
+  },
+  "order_confirmation": {
+    "name": "order_confirmation",
+    "subject": "订单确认 #{{ order_id }} - {{ company_name }}",
+    "body": "{{> header}}\n\n# 订单确认\n\n您好 {{ user_name }}，\n\n感谢您的购买！您的订单已确认。\n\n## 订单信息\n\n| 项目 | 详情 |\n|------|------|\n| 订单号 | {{ order_id }} |\n| 下单时间 | {{ order_date }} |\n| 预计送达 | {{ delivery_date }} |\n| 支付方式 | {{ payment_method }} |\n| 订单金额 | ¥{{ total_amount }} |\n\n## 商品清单\n\n{% for item in order_items %}\n- **{{ item.name }}** × {{ item.quantity }} - ¥{{ item.price }}\n{% endfor %}\n\n## 收货信息\n\n- **收货人**: {{ shipping_name }}\n- **电话**: {{ shipping_phone }}\n- **地址**: {{ shipping_address }}\n\n<a href=\"{{ order_link }}\" class=\"btn\">查看订单详情</a>\n\n{% if has_coupon %}\n🎊 **下次购物优惠**: 您已获得 ¥{{ coupon_amount }} 优惠券，有效期至 {{ coupon_expire }}。\n{% endif %}\n\n如有任何问题，请随时联系我们。\n\n{{> signature}}\n\n{{> footer}}",
+    "variables": [
+      {
+        "name": "user_name",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "company_name",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "recipient_email",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "order_id",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "order_date",
+        "type": "date",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "delivery_date",
+        "type": "date",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "payment_method",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "total_amount",
+        "type": "number",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "order_items",
+        "type": "list",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "shipping_name",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "shipping_phone",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "shipping_address",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "order_link",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "has_coupon",
+        "type": "string",
+        "required": false,
+        "default": "false"
+      },
+      {
+        "name": "coupon_amount",
+        "type": "number",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "coupon_expire",
+        "type": "date",
+        "required": false,
+        "default": ""
+      },
+      {
+        "name": "sender_name",
+        "type": "string",
+        "required": false,
+        "default": "订单团队"
+      },
+      {
+        "name": "sender_title",
+        "type": "string",
+        "required": false,
+        "default": "订单管理员"
+      },
+      {
+        "name": "sender_email",
+        "type": "string",
+        "required": false,
+        "default": "orders@example.com"
+      },
+      {
+        "name": "sender_phone",
+        "type": "string",
+        "required": false,
+        "default": "400-888-8888"
+      },
+      {
+        "name": "year",
+        "type": "string",
+        "required": false,
+        "default": "2026"
+      }
+    ],
+    "created_at": "2026-06-08T09:39:05.209293",
+    "updated_at": "2026-06-08T09:39:05.209293",
+    "version": 1
+  },
+  "event_invitation": {
+    "name": "event_invitation",
+    "subject": "邀请函: {{ event_name }} - 诚邀您参加",
+    "body": "{{> header}}\n\n# 诚邀您参加\n\n尊敬的 {{ user_name }}，\n\n我们诚挚地邀请您参加 **{{ event_name }}**。\n\n## 活动详情\n\n- **活动主题**: {{ event_name }}\n- **活动时间**: {{ event_date }} {{ event_time }}\n- **活动地点**: {{ event_location }}\n- **活动形式**: {{ event_format }}\n\n## 活动亮点\n\n{% for highlight in event_highlights %}\n- {{ highlight }}\n{% endfor %}\n\n## 演讲嘉宾\n\n{% for speaker in speakers %}\n- **{{ speaker.name }}** - {{ speaker.title }}\n{% endfor %}\n\n<a href=\"{{ rsvp_link }}\" class=\"btn\">立即报名</a>\n\n{% if is_vip %}\n🌟 **VIP 专享**: 您将享有 VIP 席位、专属休息室及与嘉宾面对面交流的机会。\n{% endif %}\n\n名额有限，请尽早报名。如有任何疑问，请联系活动组委会。\n\n期待您的出席！\n\n{{> signature}}\n\n{{> footer}}",
+    "variables": [
+      {
+        "name": "user_name",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "company_name",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "recipient_email",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "event_name",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "event_date",
+        "type": "date",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "event_time",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "event_location",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "event_format",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "event_highlights",
+        "type": "list",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "speakers",
+        "type": "list",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "rsvp_link",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "is_vip",
+        "type": "string",
+        "required": false,
+        "default": "false"
+      },
+      {
+        "name": "sender_name",
+        "type": "string",
+        "required": false,
+        "default": "活动组委会"
+      },
+      {
+        "name": "sender_title",
+        "type": "string",
+        "required": false,
+        "default": "活动负责人"
+      },
+      {
+        "name": "sender_email",
+        "type": "string",
+        "required": false,
+        "default": "events@example.com"
+      },
+      {
+        "name": "sender_phone",
+        "type": "string",
+        "required": false,
+        "default": "400-888-8888"
+      },
+      {
+        "name": "year",
+        "type": "string",
+        "required": false,
+        "default": "2026"
+      }
+    ],
+    "created_at": "2026-06-08T09:39:05.209293",
+    "updated_at": "2026-06-08T09:39:05.209293",
+    "version": 1
+  },
+  "weekly_report": {
+    "name": "weekly_report",
+    "subject": "周报汇总 - {{ week_range }} {{ company_name }}",
+    "body": "{{> header}}\n\n# 周报汇总\n\n您好 {{ user_name }}，\n\n以下是 {{ week_range }} 的工作周报。\n\n## 本周工作总结\n\n### 已完成工作\n\n{% for task in completed_tasks %}\n- ✅ **{{ task.title }}** - {{ task.description }}\n{% endfor %}\n\n### 进行中工作\n\n{% for task in in_progress_tasks %}\n- 🔄 **{{ task.title }}** - 进度: {{ task.progress }}%\n{% endfor %}\n\n## 关键指标\n\n| 指标 | 本周 | 上周 | 变化 |\n|------|------|------|------|\n{% for metric in metrics %}\n| {{ metric.name }} | {{ metric.current }} | {{ metric.last_week }} | {{ metric.change }} |\n{% endfor %}\n\n## 问题与风险\n\n{% if has_issues %}\n{% for issue in issues %}\n> ⚠️ **{{ issue.title }}**: {{ issue.description }}\n{% endfor %}\n{% else %}\n本周无重大问题。\n{% endif %}\n\n## 下周计划\n\n{% for plan in next_week_plans %}\n- **{{ plan.title }}** - 负责人: {{ plan.owner }}\n{% endfor %}\n\n{% if is_manager %}\n📊 **管理者视图**: 您可以点击下方按钮查看完整的团队仪表盘。\n<a href=\"{{ dashboard_link }}\" class=\"btn\">查看团队仪表盘</a>\n{% endif %}\n\n如有任何疑问，请随时沟通。\n\n{{> signature}}\n\n{{> footer}}",
+    "variables": [
+      {
+        "name": "user_name",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "company_name",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "recipient_email",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "week_range",
+        "type": "string",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "completed_tasks",
+        "type": "list",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "in_progress_tasks",
+        "type": "list",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "metrics",
+        "type": "list",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "has_issues",
+        "type": "string",
+        "required": false,
+        "default": "false"
+      },
+      {
+        "name": "issues",
+        "type": "list",
+        "required": false,
+        "default": []
+      },
+      {
+        "name": "next_week_plans",
+        "type": "list",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "is_manager",
+        "type": "string",
+        "required": false,
+        "default": "false"
+      },
+      {
+        "name": "dashboard_link",
+        "type": "string",
+        "required": false,
+        "default": ""
+      },
+      {
+        "name": "sender_name",
+        "type": "string",
+        "required": false,
+        "default": "团队负责人"
+      },
+      {
+        "name": "sender_title",
+        "type": "string",
+        "required": false,
+        "default": "项目经理"
+      },
+      {
+        "name": "sender_email",
+        "type": "string",
+        "required": false,
+        "default": "report@example.com"
+      },
+      {
+        "name": "sender_phone",
+        "type": "string",
+        "required": false,
+        "default": "400-888-8888"
+      },
+      {
+        "name": "year",
+        "type": "string",
+        "required": false,
+        "default": "2026"
+      }
+    ],
+    "created_at": "2026-06-08T09:39:05.209293",
+    "updated_at": "2026-06-08T09:39:05.209293",
+    "version": 1
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "name": "weekly_report",
+  "subject": "周报汇总 - {{ week_range }} {{ company_name }}",
+  "body": "{{> header}}\n\n# 周报汇总\n\n您好 {{ user_name }}，\n\n以下是 {{ week_range }} 的工作周报。\n\n## 本周工作总结\n\n### 已完成工作\n\n{% for task in completed_tasks %}\n- ✅ **{{ task.title }}** - {{ task.description }}\n{% endfor %}\n\n### 进行中工作\n\n{% for task in in_progress_tasks %}\n- 🔄 **{{ task.title }}** - 进度: {{ task.progress }}%\n{% endfor %}\n\n## 关键指标\n\n| 指标 | 本周 | 上周 | 变化 |\n|------|------|------|------|\n{% for metric in metrics %}\n| {{ metric.name }} | {{ metric.current }} | {{ metric.last_week }} | {{ metric.change }} |\n{% endfor %}\n\n## 问题与风险\n\n{% if has_issues %}\n{% for issue in issues %}\n> ⚠️ **{{ issue.title }}**: {{ issue.description }}\n{% endfor %}\n{% else %}\n本周无重大问题。\n{% endif %}\n\n## 下周计划\n\n{% for plan in next_week_plans %}\n- **{{ plan.title }}** - 负责人: {{ plan.owner }}\n{% endfor %}\n\n{% if is_manager %}\n📊 **管理者视图**: 您可以点击下方按钮查看完整的团队仪表盘。\n<a href=\"{{ dashboard_link }}\" class=\"btn\">查看团队仪表盘</a>\n{% endif %}\n\n如有任何疑问，请随时沟通。\n\n{{> signature}}\n\n{{> footer}}",
+  "variables": [
+    {
+      "name": "user_name",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "company_name",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "recipient_email",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "week_range",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "completed_tasks",
+      "type": "list",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "in_progress_tasks",
+      "type": "list",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "metrics",
+      "type": "list",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "has_issues",
+      "type": "string",
+      "required": false,
+      "default": "false"
+    },
+    {
+      "name": "issues",
+      "type": "list",
+      "required": false,
+      "default": []
+    },
+    {
+      "name": "next_week_plans",
+      "type": "list",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "is_manager",
+      "type": "string",
+      "required": false,
+      "default": "false"
+    },
+    {
+      "name": "dashboard_link",
+      "type": "string",
+      "required": false,
+      "default": ""
+    },
+    {
+      "name": "sender_name",
+      "type": "string",
+      "required": false,
+      "default": "团队负责人"
+    },
+    {
+      "name": "sender_title",
+      "type": "string",
+      "required": false,
+      "default": "项目经理"
+    },
+    {
+      "name": "sender_email",
+      "type": "string",
+      "required": false,
+      "default": "report@example.com"
+    },
+    {
+      "name": "sender_phone",
+      "type": "string",
+      "required": false,
+      "default": "400-888-8888"
+    },
+    {
+      "name": "year",
+      "type": "string",
+      "required": false,
+      "default": "2026"
+    }
+  ],
+  "created_at": "2026-06-08T09:39:05.209293",
+  "updated_at": "2026-06-08T09:39:05.209293",
+  "version": 1
+}

@@ -1,0 +1,112 @@
+{
+  "name": "event_invitation",
+  "subject": "邀请函: {{ event_name }} - 诚邀您参加",
+  "body": "{{> header}}\n\n# 诚邀您参加\n\n尊敬的 {{ user_name }}，\n\n我们诚挚地邀请您参加 **{{ event_name }}**。\n\n## 活动详情\n\n- **活动主题**: {{ event_name }}\n- **活动时间**: {{ event_date }} {{ event_time }}\n- **活动地点**: {{ event_location }}\n- **活动形式**: {{ event_format }}\n\n## 活动亮点\n\n{% for highlight in event_highlights %}\n- {{ highlight }}\n{% endfor %}\n\n## 演讲嘉宾\n\n{% for speaker in speakers %}\n- **{{ speaker.name }}** - {{ speaker.title }}\n{% endfor %}\n\n<a href=\"{{ rsvp_link }}\" class=\"btn\">立即报名</a>\n\n{% if is_vip %}\n🌟 **VIP 专享**: 您将享有 VIP 席位、专属休息室及与嘉宾面对面交流的机会。\n{% endif %}\n\n名额有限，请尽早报名。如有任何疑问，请联系活动组委会。\n\n期待您的出席！\n\n{{> signature}}\n\n{{> footer}}",
+  "variables": [
+    {
+      "name": "user_name",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "company_name",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "recipient_email",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "event_name",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "event_date",
+      "type": "date",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "event_time",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "event_location",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "event_format",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "event_highlights",
+      "type": "list",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "speakers",
+      "type": "list",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "rsvp_link",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "is_vip",
+      "type": "string",
+      "required": false,
+      "default": "false"
+    },
+    {
+      "name": "sender_name",
+      "type": "string",
+      "required": false,
+      "default": "活动组委会"
+    },
+    {
+      "name": "sender_title",
+      "type": "string",
+      "required": false,
+      "default": "活动负责人"
+    },
+    {
+      "name": "sender_email",
+      "type": "string",
+      "required": false,
+      "default": "events@example.com"
+    },
+    {
+      "name": "sender_phone",
+      "type": "string",
+      "required": false,
+      "default": "400-888-8888"
+    },
+    {
+      "name": "year",
+      "type": "string",
+      "required": false,
+      "default": "2026"
+    }
+  ],
+  "created_at": "2026-06-08T09:39:05.209293",
+  "updated_at": "2026-06-08T09:39:05.209293",
+  "version": 1
+}

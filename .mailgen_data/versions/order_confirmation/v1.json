@@ -1,0 +1,136 @@
+{
+  "name": "order_confirmation",
+  "subject": "订单确认 #{{ order_id }} - {{ company_name }}",
+  "body": "{{> header}}\n\n# 订单确认\n\n您好 {{ user_name }}，\n\n感谢您的购买！您的订单已确认。\n\n## 订单信息\n\n| 项目 | 详情 |\n|------|------|\n| 订单号 | {{ order_id }} |\n| 下单时间 | {{ order_date }} |\n| 预计送达 | {{ delivery_date }} |\n| 支付方式 | {{ payment_method }} |\n| 订单金额 | ¥{{ total_amount }} |\n\n## 商品清单\n\n{% for item in order_items %}\n- **{{ item.name }}** × {{ item.quantity }} - ¥{{ item.price }}\n{% endfor %}\n\n## 收货信息\n\n- **收货人**: {{ shipping_name }}\n- **电话**: {{ shipping_phone }}\n- **地址**: {{ shipping_address }}\n\n<a href=\"{{ order_link }}\" class=\"btn\">查看订单详情</a>\n\n{% if has_coupon %}\n🎊 **下次购物优惠**: 您已获得 ¥{{ coupon_amount }} 优惠券，有效期至 {{ coupon_expire }}。\n{% endif %}\n\n如有任何问题，请随时联系我们。\n\n{{> signature}}\n\n{{> footer}}",
+  "variables": [
+    {
+      "name": "user_name",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "company_name",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "recipient_email",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "order_id",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "order_date",
+      "type": "date",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "delivery_date",
+      "type": "date",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "payment_method",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "total_amount",
+      "type": "number",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "order_items",
+      "type": "list",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "shipping_name",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "shipping_phone",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "shipping_address",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "order_link",
+      "type": "string",
+      "required": true,
+      "default": null
+    },
+    {
+      "name": "has_coupon",
+      "type": "string",
+      "required": false,
+      "default": "false"
+    },
+    {
+      "name": "coupon_amount",
+      "type": "number",
+      "required": false,
+      "default": 0
+    },
+    {
+      "name": "coupon_expire",
+      "type": "date",
+      "required": false,
+      "default": ""
+    },
+    {
+      "name": "sender_name",
+      "type": "string",
+      "required": false,
+      "default": "订单团队"
+    },
+    {
+      "name": "sender_title",
+      "type": "string",
+      "required": false,
+      "default": "订单管理员"
+    },
+    {
+      "name": "sender_email",
+      "type": "string",
+      "required": false,
+      "default": "orders@example.com"
+    },
+    {
+      "name": "sender_phone",
+      "type": "string",
+      "required": false,
+      "default": "400-888-8888"
+    },
+    {
+      "name": "year",
+      "type": "string",
+      "required": false,
+      "default": "2026"
+    }
+  ],
+  "created_at": "2026-06-08T09:39:05.209293",
+  "updated_at": "2026-06-08T09:39:05.209293",
+  "version": 1
+}
