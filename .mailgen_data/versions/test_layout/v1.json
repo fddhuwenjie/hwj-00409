@@ -1,0 +1,66 @@
+{
+  "name": "test_layout",
+  "subject": "测试布局邮件",
+  "body": "{% extends \"single_column\" %}{% block content %}# 测试内容\\n\\n这是一个测试布局功能的邮件。\\n\\n亲爱的 {{ user_name }}，\\n\\n感谢您注册 **{{ company_name }}**！\\n\\n## 您的信息\\n\\n- 用户名: {{ user_name }}\\n- 注册日期: {{ register_date }}\\n\\n{% endblock %}",
+  "variables": [
+    {
+      "name": "user_name",
+      "type": "string",
+      "required": true,
+      "default": ""
+    },
+    {
+      "name": "recipient_email",
+      "type": "string",
+      "required": true,
+      "default": ""
+    },
+    {
+      "name": "company_name",
+      "type": "string",
+      "required": true,
+      "default": ""
+    },
+    {
+      "name": "register_date",
+      "type": "date",
+      "required": true,
+      "default": ""
+    },
+    {
+      "name": "sender_name",
+      "type": "string",
+      "required": false,
+      "default": "客服团队"
+    },
+    {
+      "name": "sender_title",
+      "type": "string",
+      "required": false,
+      "default": "客户成功经理"
+    },
+    {
+      "name": "sender_email",
+      "type": "string",
+      "required": false,
+      "default": "welcome@example.com"
+    },
+    {
+      "name": "sender_phone",
+      "type": "string",
+      "required": false,
+      "default": "400-888-8888"
+    },
+    {
+      "name": "year",
+      "type": "string",
+      "required": false,
+      "default": "2026"
+    }
+  ],
+  "created_at": "2026-06-08T10:18:58.455619",
+  "updated_at": "2026-06-08T10:18:58.455619",
+  "version": 1,
+  "layout": null,
+  "variants": []
+}

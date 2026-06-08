@@ -1,0 +1,24 @@
+{
+  "name": "test_two_column",
+  "subject": "双栏布局测试",
+  "body": "{% extends \"two_column\" %}{% block content %}# 主要内容\\n\\n这是双栏布局的主要内容区域。{% endblock %}{% block sidebar %}# 侧边栏\\n\\n这是侧边栏内容。{% endblock %}",
+  "variables": [
+    {
+      "name": "user_name",
+      "type": "string",
+      "required": true,
+      "default": ""
+    },
+    {
+      "name": "recipient_email",
+      "type": "string",
+      "required": true,
+      "default": ""
+    }
+  ],
+  "created_at": "2026-06-08T10:59:58.429997",
+  "updated_at": "2026-06-08T10:59:58.429997",
+  "version": 1,
+  "layout": null,
+  "variants": []
+}

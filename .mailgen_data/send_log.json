@@ -1,0 +1,62 @@
+[
+  {
+    "timestamp": "2026-06-08T10:25:51.034936",
+    "template": "test_ab",
+    "recipient_count": 5,
+    "recipients": [
+      {
+        "recipient_email": "alice@example.com",
+        "user_name": "Alice",
+        "company_name": "科技公司",
+        "register_date": "2026-06-01",
+        "_variant": "A"
+      },
+      {
+        "recipient_email": "bob@example.com",
+        "user_name": "Bob",
+        "company_name": "科技公司",
+        "register_date": "2026-06-05",
+        "_variant": "B"
+      },
+      {
+        "recipient_email": "charlie@example.com",
+        "user_name": "Charlie",
+        "company_name": "科技公司",
+        "register_date": "2026-06-08",
+        "_variant": "B"
+      },
+      {
+        "recipient_email": "david@example.com",
+        "user_name": "David",
+        "company_name": "科技公司",
+        "register_date": "2026-06-10",
+        "_variant": "A"
+      },
+      {
+        "recipient_email": "eve@example.com",
+        "user_name": "Eve",
+        "company_name": "科技公司",
+        "register_date": "2026-06-12",
+        "_variant": "B"
+      }
+    ],
+    "output_files": [
+      "/Users/huwenjie/项目/胡文杰题目汇总/项目/hwj-00409/output/test_ab_20260608_102550/alice_at_example_dot_com_A.html",
+      "/Users/huwenjie/项目/胡文杰题目汇总/项目/hwj-00409/output/test_ab_20260608_102550/bob_at_example_dot_com_B.html",
+      "/Users/huwenjie/项目/胡文杰题目汇总/项目/hwj-00409/output/test_ab_20260608_102550/charlie_at_example_dot_com_B.html",
+      "/Users/huwenjie/项目/胡文杰题目汇总/项目/hwj-00409/output/test_ab_20260608_102550/david_at_example_dot_com_A.html",
+      "/Users/huwenjie/项目/胡文杰题目汇总/项目/hwj-00409/output/test_ab_20260608_102550/eve_at_example_dot_com_B.html"
+    ],
+    "variant": null,
+    "variant_stats": {
+      "A": {
+        "sent": 2,
+        "failed": 0
+      },
+      "B": {
+        "sent": 3,
+        "failed": 0
+      }
+    }
+  }
+]

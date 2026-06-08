@@ -79,7 +79,9 @@
     ],
     "created_at": "2026-06-08T09:39:05.209293",
     "updated_at": "2026-06-08T09:39:05.209293",
-    "version": 1
+    "version": 1,
+    "layout": null,
+    "variants": []
   },
   "password_reset": {
     "name": "password_reset",
@@ -155,7 +157,9 @@
     ],
     "created_at": "2026-06-08T09:39:05.209293",
     "updated_at": "2026-06-08T09:39:05.209293",
-    "version": 1
+    "version": 1,
+    "layout": null,
+    "variants": []
   },
   "order_confirmation": {
     "name": "order_confirmation",
@@ -291,7 +295,9 @@
     ],
     "created_at": "2026-06-08T09:39:05.209293",
     "updated_at": "2026-06-08T09:39:05.209293",
-    "version": 1
+    "version": 1,
+    "layout": null,
+    "variants": []
   },
   "event_invitation": {
     "name": "event_invitation",
@@ -403,7 +409,9 @@
     ],
     "created_at": "2026-06-08T09:39:05.209293",
     "updated_at": "2026-06-08T09:39:05.209293",
-    "version": 1
+    "version": 1,
+    "layout": null,
+    "variants": []
   },
   "weekly_report": {
     "name": "weekly_report",
@@ -515,6 +523,165 @@
     ],
     "created_at": "2026-06-08T09:39:05.209293",
     "updated_at": "2026-06-08T09:39:05.209293",
-    "version": 1
+    "version": 1,
+    "layout": null,
+    "variants": []
+  },
+  "test_layout": {
+    "name": "test_layout",
+    "subject": "测试布局邮件",
+    "body": "{% extends \"single_column\" %}{% block content %}# 测试内容\\n\\n这是一个测试布局功能的邮件。\\n\\n亲爱的 {{ user_name }}，\\n\\n感谢您注册 **{{ company_name }}**！\\n\\n## 您的信息\\n\\n- 用户名: {{ user_name }}\\n- 注册日期: {{ register_date }}\\n\\n{% endblock %}",
+    "variables": [
+      {
+        "name": "user_name",
+        "type": "string",
+        "required": true,
+        "default": ""
+      },
+      {
+        "name": "recipient_email",
+        "type": "string",
+        "required": true,
+        "default": ""
+      },
+      {
+        "name": "company_name",
+        "type": "string",
+        "required": true,
+        "default": ""
+      },
+      {
+        "name": "register_date",
+        "type": "date",
+        "required": true,
+        "default": ""
+      },
+      {
+        "name": "sender_name",
+        "type": "string",
+        "required": false,
+        "default": "客服团队"
+      },
+      {
+        "name": "sender_title",
+        "type": "string",
+        "required": false,
+        "default": "客户成功经理"
+      },
+      {
+        "name": "sender_email",
+        "type": "string",
+        "required": false,
+        "default": "welcome@example.com"
+      },
+      {
+        "name": "sender_phone",
+        "type": "string",
+        "required": false,
+        "default": "400-888-8888"
+      },
+      {
+        "name": "year",
+        "type": "string",
+        "required": false,
+        "default": "2026"
+      }
+    ],
+    "created_at": "2026-06-08T10:18:58.455619",
+    "updated_at": "2026-06-08T10:18:58.455619",
+    "version": 1,
+    "layout": null,
+    "variants": []
+  },
+  "test_ab": {
+    "name": "test_ab",
+    "subject": "默认主题",
+    "body": "默认正文内容，{{ user_name }} 你好！",
+    "variables": [
+      {
+        "name": "user_name",
+        "type": "string",
+        "required": true,
+        "default": ""
+      },
+      {
+        "name": "recipient_email",
+        "type": "string",
+        "required": true,
+        "default": ""
+      },
+      {
+        "name": "company_name",
+        "type": "string",
+        "required": true,
+        "default": ""
+      }
+    ],
+    "created_at": "2026-06-08T10:23:53.127383",
+    "updated_at": "2026-06-08T10:23:53.127383",
+    "version": 1,
+    "layout": null,
+    "variants": [
+      {
+        "name": "A",
+        "subject": "5折优惠!",
+        "body": "# 超值优惠\\n\\n亲爱的 {{ user_name }}，限时5折！",
+        "weight": 50
+      },
+      {
+        "name": "B",
+        "subject": "新品上市!",
+        "body": "# 新品推荐\\n\\n亲爱的 {{ user_name }}，新品上市！",
+        "weight": 50
+      }
+    ]
+  },
+  "test_two_column": {
+    "name": "test_two_column",
+    "subject": "双栏布局测试",
+    "body": "{% extends \"two_column\" %}{% block content %}# 主要内容\\n\\n这是双栏布局的主要内容区域。{% endblock %}{% block sidebar %}# 侧边栏\\n\\n这是侧边栏内容。{% endblock %}",
+    "variables": [
+      {
+        "name": "user_name",
+        "type": "string",
+        "required": true,
+        "default": ""
+      },
+      {
+        "name": "recipient_email",
+        "type": "string",
+        "required": true,
+        "default": ""
+      }
+    ],
+    "created_at": "2026-06-08T10:59:58.429997",
+    "updated_at": "2026-06-08T10:59:58.429997",
+    "version": 1,
+    "layout": null,
+    "variants": []
+  },
+  "test_card": {
+    "name": "test_card",
+    "subject": "卡片式布局测试",
+    "body": "{% extends \"card_style\" %}{% block content %}# 卡片内容\\n\\n这是卡片式布局的内容。{% endblock %}",
+    "variables": [
+      {
+        "name": "user_name",
+        "type": "string",
+        "required": true,
+        "default": ""
+      },
+      {
+        "name": "recipient_email",
+        "type": "string",
+        "required": true,
+        "default": ""
+      }
+    ],
+    "created_at": "2026-06-08T11:00:27.847204",
+    "updated_at": "2026-06-08T11:00:27.847204",
+    "version": 1,
+    "layout": null,
+    "variants": []
   }
 }

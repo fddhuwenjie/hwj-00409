@@ -1,0 +1,13 @@
+[
+  {
+    "success": true,
+    "timestamp": "2026-06-08T10:27:48.343248",
+    "schedule_id": "test_now",
+    "template": "test_ab",
+    "total_recipients": 5,
+    "sent": 5,
+    "failed": 0,
+    "output_dir": "/Users/huwenjie/项目/胡文杰题目汇总/项目/hwj-00409/output/schedule_test_now_20260608_102748",
+    "variant_stats": null
+  }
+]

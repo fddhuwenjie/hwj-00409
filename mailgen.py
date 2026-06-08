@@ -8,7 +8,7 @@ import shutil
 import zipfile
 import hashlib
 import difflib
-from datetime import datetime
+from datetime import datetime, timedelta
 from dataclasses import dataclass, asdict, field
 from typing import List, Dict, Any, Optional
 
@@ -26,8 +26,12 @@ init(autoreset=True)
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.mailgen_data')
 TEMPLATES_FILE = os.path.join(DATA_DIR, 'templates.json')
 FRAGMENTS_FILE = os.path.join(DATA_DIR, 'fragments.json')
+LAYOUTS_FILE = os.path.join(DATA_DIR, 'layouts.json')
+SCHEDULES_FILE = os.path.join(DATA_DIR, 'schedules.json')
+SCHEDULE_HISTORY_FILE = os.path.join(DATA_DIR, 'schedule_history.json')
 VERSIONS_DIR = os.path.join(DATA_DIR, 'versions')
 SEND_LOG_FILE = os.path.join(DATA_DIR, 'send_log.json')
+AB_TEST_LOG_FILE = os.path.join(DATA_DIR, 'ab_test_log.json')
 STATS_FILE = os.path.join(DATA_DIR, 'stats.json')
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'output')
 
@@ -114,6 +118,183 @@ HTML_THEMES = {
 }
 
 
+PRESET_LAYOUTS = {
+    'single_column': {
+        'name': '单栏简洁',
+        'description': '简洁的单栏布局，适合大多数邮件场景',
+        'body': '''<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f5f7fa; margin: 0; padding: 20px; }
+        .email-wrapper { max-width: 600px; margin: 0 auto; }
+        .email-header { background: #ffffff; padding: 30px; border-radius: 8px 8px 0 0; border-bottom: 3px solid #3b82f6; }
+        .email-header h1 { margin: 0; color: #1e3a8a; font-size: 24px; }
+        .email-content { background: #ffffff; padding: 40px 30px; }
+        .email-footer { background: #f8fafc; padding: 20px 30px; border-radius: 0 0 8px 8px; text-align: center; color: #64748b; font-size: 12px; border-top: 1px solid #e2e8f0; }
+    </style>
+</head>
+<body>
+    <div class="email-wrapper">
+        <div class="email-header">
+            <h1>{{ email_subject }}</h1>
+        </div>
+        <div class="email-content">
+            {% block content %}{% endblock %}
+        </div>
+        <div class="email-footer">
+            {{> footer}}
+        </div>
+    </div>
+</body>
+</html>'''
+    },
+    'two_column': {
+        'name': '双栏侧边栏',
+        'description': '左侧导航侧边栏 + 右侧主内容，适合资讯/通讯类邮件',
+        'body': '''<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f5f7fa; margin: 0; padding: 20px; }
+        .email-wrapper { max-width: 800px; margin: 0 auto; }
+        .email-container { display: table; width: 100%; }
+        .sidebar { display: table-cell; width: 200px; background: #1e293b; padding: 30px 20px; vertical-align: top; color: #ffffff; }
+        .sidebar h3 { color: #60a5fa; margin-top: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+        .sidebar ul { list-style: none; padding: 0; margin: 0; }
+        .sidebar li { padding: 8px 0; border-bottom: 1px solid #334155; font-size: 13px; }
+        .main-content { display: table-cell; background: #ffffff; padding: 40px 30px; vertical-align: top; }
+        .email-footer { background: #f8fafc; padding: 20px; text-align: center; color: #64748b; font-size: 12px; border-top: 1px solid #e2e8f0; }
+        @media only screen and (max-width: 600px) {
+            .sidebar, .main-content { display: block; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-wrapper">
+        <div class="email-container">
+            <div class="sidebar">
+                {% block sidebar %}
+                <h3>快速导航</h3>
+                <ul>
+                    <li>📢 最新动态</li>
+                    <li>📊 数据报告</li>
+                    <li>🎯 活动推荐</li>
+                    <li>💡 技巧分享</li>
+                </ul>
+                {% endblock %}
+            </div>
+            <div class="main-content">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+        <div class="email-footer">
+            {{> footer}}
+        </div>
+    </div>
+</body>
+</html>'''
+    },
+    'card_style': {
+        'name': '卡片式',
+        'description': '现代卡片式设计，视觉层次感强，适合营销邮件',
+        'body': '''<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0; padding: 30px; min-height: 100vh; }
+        .email-wrapper { max-width: 650px; margin: 0 auto; }
+        .hero-card { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 50px 40px; border-radius: 16px 16px 0 0; color: #ffffff; text-align: center; }
+        .hero-card h1 { margin: 0; font-size: 32px; font-weight: 700; }
+        .hero-card .subtitle { margin-top: 10px; font-size: 16px; opacity: 0.9; }
+        .content-cards { background: #f8fafc; padding: 20px; }
+        .card { background: #ffffff; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .card:last-child { margin-bottom: 0; }
+        .card h2 { margin-top: 0; color: #1e293b; font-size: 20px; }
+        .email-footer { background: #1e293b; padding: 30px; border-radius: 0 0 16px 16px; text-align: center; color: #94a3b8; font-size: 12px; }
+        .btn { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff !important; padding: 14px 32px; border-radius: 30px; text-decoration: none; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="email-wrapper">
+        <div class="hero-card">
+            <h1>{{ email_subject }}</h1>
+            <div class="subtitle">{{ email_subtitle|default('精彩内容，不容错过') }}</div>
+        </div>
+        <div class="content-cards">
+            {% block content %}{% endblock %}
+        </div>
+        <div class="email-footer">
+            {{> footer}}
+        </div>
+    </div>
+</body>
+</html>'''
+    }
+}
+
+
+@dataclass
+class Layout:
+    name: str
+    body: str
+    description: str = ''
+    created_at: str = ''
+    updated_at: str = ''
+
+    def to_dict(self) -> Dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict) -> 'Layout':
+        return cls(**data)
+
+
+@dataclass
+class Variant:
+    name: str
+    subject: str
+    body: str
+    weight: int = 50
+
+    def to_dict(self) -> Dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict) -> 'Variant':
+        return cls(**data)
+
+
+@dataclass
+class Schedule:
+    id: str
+    name: str
+    template_name: str
+    recipients_csv: str
+    cron_expression: str
+    variables_source: str
+    variant: Optional[str] = None
+    ab_test: bool = False
+    theme: str = 'business'
+    enabled: bool = True
+    created_at: str = ''
+    last_run: Optional[str] = None
+    next_run: Optional[str] = None
+
+    def to_dict(self) -> Dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict) -> 'Schedule':
+        return cls(**data)
+
+
 class FragmentLoader(BaseLoader):
     def __init__(self, fragments: Dict[str, str]):
         self.fragments = fragments
@@ -187,15 +368,19 @@ class Template:
     created_at: str
     updated_at: str
     version: int = 1
+    layout: Optional[str] = None
+    variants: List[Variant] = field(default_factory=list)
 
     def to_dict(self) -> Dict:
         d = asdict(self)
         d['variables'] = [v.to_dict() for v in self.variables]
+        d['variants'] = [v.to_dict() for v in self.variants]
         return d
 
     @classmethod
     def from_dict(cls, data: Dict) -> 'Template':
         variables = [Variable.from_dict(v) for v in data.get('variables', [])]
+        variants = [Variant.from_dict(v) for v in data.get('variants', [])]
         return cls(
             name=data['name'],
             subject=data['subject'],
@@ -203,7 +388,9 @@ class Template:
             variables=variables,
             created_at=data.get('created_at', datetime.now().isoformat()),
             updated_at=data.get('updated_at', datetime.now().isoformat()),
-            version=data.get('version', 1)
+            version=data.get('version', 1),
+            layout=data.get('layout', None),
+            variants=variants
         )
 
 
@@ -240,6 +427,106 @@ def load_fragments() -> Dict[str, Fragment]:
 def save_fragments(fragments: Dict[str, Fragment]):
     data = {k: v.to_dict() for k, v in fragments.items()}
     save_json(FRAGMENTS_FILE, data)
+
+
+def load_layouts() -> Dict[str, Layout]:
+    data = load_json(LAYOUTS_FILE, {})
+    if not data:
+        now = datetime.now().isoformat()
+        data = {}
+        for key, layout_data in PRESET_LAYOUTS.items():
+            data[key] = Layout(
+                name=key,
+                body=layout_data['body'],
+                description=layout_data['description'],
+                created_at=now,
+                updated_at=now
+            )
+        save_layouts(data)
+    else:
+        data = {k: Layout.from_dict(v) for k, v in data.items()}
+    return data
+
+
+def save_layouts(layouts: Dict[str, Layout]):
+    data = {k: v.to_dict() for k, v in layouts.items()}
+    save_json(LAYOUTS_FILE, data)
+
+
+def load_schedules() -> Dict[str, Schedule]:
+    data = load_json(SCHEDULES_FILE, {})
+    return {k: Schedule.from_dict(v) for k, v in data.items()}
+
+
+def save_schedules(schedules: Dict[str, Schedule]):
+    data = {k: v.to_dict() for k, v in schedules.items()}
+    save_json(SCHEDULES_FILE, data)
+
+
+def load_schedule_history() -> List[Dict]:
+    return load_json(SCHEDULE_HISTORY_FILE, [])
+
+
+def save_schedule_history(history: List[Dict]):
+    save_json(SCHEDULE_HISTORY_FILE, history)
+
+
+def parse_blocks(template_body: str) -> Dict[str, str]:
+    blocks = {}
+    pattern = r'\{%\s*block\s+(\w+)\s*%\}(.*?)\{%\s*endblock\s*%\}'
+    matches = re.findall(pattern, template_body, re.DOTALL)
+    for block_name, block_content in matches:
+        blocks[block_name] = block_content.strip()
+    return blocks
+
+
+def extract_extends(template_body: str) -> Optional[str]:
+    pattern = r'\{%\s*extends\s+["\']([^"\']+)["\']\s*%\}'
+    match = re.search(pattern, template_body)
+    if match:
+        return match.group(1)
+    return None
+
+
+def remove_extends_tag(template_body: str) -> str:
+    pattern = r'\{%\s*extends\s+["\'][^"\']+["\']\s*%\}\s*'
+    return re.sub(pattern, '', template_body)
+
+
+def apply_layout(child_body: str, layout_body: str) -> str:
+    child_blocks = parse_blocks(child_body)
+    child_body_no_blocks = re.sub(
+        r'\{%\s*block\s+\w+\s*%\}.*?\{%\s*endblock\s*%\}',
+        '',
+        child_body,
+        flags=re.DOTALL
+    ).strip()
+
+    def replace_block(match):
+        block_name = match.group(1)
+        if block_name in child_blocks:
+            return child_blocks[block_name]
+        default_content = match.group(2) if match.lastindex and match.lastindex > 1 else ''
+        return default_content
+
+    layout_body = re.sub(
+        r'\{%\s*block\s+(\w+)\s*%\}(.*?)\{%\s*endblock\s*%\}',
+        replace_block,
+        layout_body,
+        flags=re.DOTALL
+    )
+
+    if child_body_no_blocks:
+        layout_body = layout_body.replace(
+            '{% block content %}{% endblock %}',
+            child_body_no_blocks
+        )
+        layout_body = layout_body.replace(
+            '{% block content %}',
+            ''
+        ).replace('{% endblock %}', '')
+
+    return layout_body
 
 
 def load_stats() -> Dict[str, Dict]:
@@ -344,11 +631,38 @@ def process_fragment_includes(template_body: str, fragments: Dict[str, str]) -> 
     return template_body
 
 
-def render_template(template: Template, variables: Dict[str, Any], fragments: Dict[str, Fragment]) -> tuple[str, str]:
+def render_template(template: Template, variables: Dict[str, Any], fragments: Dict[str, Fragment], variant: Optional[str] = None, layouts: Optional[Dict[str, Layout]] = None) -> tuple[str, str, bool]:
     frag_content = {k: v.content for k, v in fragments.items()}
 
-    processed_subject = process_fragment_includes(template.subject, frag_content)
-    processed_body = process_fragment_includes(template.body, frag_content)
+    subject = template.subject
+    body = template.body
+    used_layout = False
+
+    if variant:
+        variant_obj = next((v for v in template.variants if v.name == variant), None)
+        if not variant_obj:
+            raise click.BadParameter(f'变体 "{variant}" 不存在于模板 "{template.name}"')
+        subject = variant_obj.subject
+        body = variant_obj.body
+
+    extends_layout = extract_extends(body)
+    if extends_layout and layouts:
+        if extends_layout not in layouts:
+            raise click.BadParameter(f'布局 "{extends_layout}" 不存在')
+        layout = layouts[extends_layout]
+        body = remove_extends_tag(body)
+        body = apply_layout(body, layout.body)
+        used_layout = True
+
+    layout_name = template.layout
+    if layout_name and not extends_layout and layouts:
+        if layout_name in layouts:
+            layout = layouts[layout_name]
+            body = apply_layout(body, layout.body)
+            used_layout = True
+
+    processed_subject = process_fragment_includes(subject, frag_content)
+    processed_body = process_fragment_includes(body, frag_content)
 
     env = jinja_env(frag_content)
 
@@ -367,6 +681,8 @@ def render_template(template: Template, variables: Dict[str, Any], fragments: Di
         else:
             template_vars[var.name] = val
 
+    template_vars['email_subject'] = processed_subject
+
     try:
         subject_template = env.from_string(processed_subject)
         body_template = env.from_string(processed_body)
@@ -375,7 +691,7 @@ def render_template(template: Template, variables: Dict[str, Any], fragments: Di
     except TemplateSyntaxError as e:
         raise click.BadParameter(f'模板语法错误: {e}')
 
-    return rendered_subject, rendered_body
+    return rendered_subject, rendered_body, used_layout
 
 
 def markdown_to_text(md_text: str) -> str:
@@ -482,16 +798,129 @@ def read_csv_records(csv_path: str) -> List[Dict[str, str]]:
     return records
 
 
-def log_send(template_name: str, recipients: List[Dict], output_files: List[str]):
+def log_send(template_name: str, recipients: List[Dict], output_files: List[str], variant: Optional[str] = None, variant_stats: Optional[Dict] = None):
     send_log = load_json(SEND_LOG_FILE, [])
     send_log.append({
         'timestamp': datetime.now().isoformat(),
         'template': template_name,
         'recipient_count': len(recipients),
         'recipients': recipients,
-        'output_files': output_files
+        'output_files': output_files,
+        'variant': variant,
+        'variant_stats': variant_stats
     })
     save_json(SEND_LOG_FILE, send_log)
+
+
+def log_ab_test(template_name: str, variant_stats: Dict):
+    ab_log = load_json(AB_TEST_LOG_FILE, [])
+    ab_log.append({
+        'timestamp': datetime.now().isoformat(),
+        'template': template_name,
+        'variant_stats': variant_stats
+    })
+    save_json(AB_TEST_LOG_FILE, ab_log)
+
+
+def select_variant_by_weight(variants: List[Variant]) -> Optional[Variant]:
+    if not variants:
+        return None
+    total_weight = sum(v.weight for v in variants)
+    if total_weight <= 0:
+        return variants[0]
+    import random
+    r = random.uniform(0, total_weight)
+    current = 0
+    for v in variants:
+        current += v.weight
+        if r <= current:
+            return v
+    return variants[-1]
+
+
+def parse_cron_field(field: str, min_val: int, max_val: int) -> List[int]:
+    values = []
+    if field == '*':
+        return list(range(min_val, max_val + 1))
+
+    for part in field.split(','):
+        if '/' in part:
+            range_part, step_part = part.split('/', 1)
+            step = int(step_part)
+            if range_part == '*':
+                start = min_val
+                end = max_val
+            elif '-' in range_part:
+                start, end = map(int, range_part.split('-', 1))
+            else:
+                start = int(range_part)
+                end = max_val
+            values.extend(range(start, end + 1, step))
+        elif '-' in part:
+            start, end = map(int, part.split('-', 1))
+            values.extend(range(start, end + 1))
+        else:
+            values.append(int(part))
+
+    return sorted(set(v for v in values if min_val <= v <= max_val))
+
+
+def parse_cron_expression(expression: str) -> Dict[str, List[int]]:
+    parts = expression.strip().split()
+    if len(parts) != 3:
+        raise ValueError(f'Cron表达式格式错误，应为 "分钟 小时 星期"，收到: {expression}')
+
+    minute_str, hour_str, dow_str = parts
+
+    minutes = parse_cron_field(minute_str, 0, 59)
+    hours = parse_cron_field(hour_str, 0, 23)
+    day_of_week = parse_cron_field(dow_str, 0, 6)
+
+    return {
+        'minutes': minutes,
+        'hours': hours,
+        'day_of_week': day_of_week
+    }
+
+
+def match_cron(expression: str, check_time: Optional[datetime] = None) -> bool:
+    if check_time is None:
+        check_time = datetime.now()
+
+    try:
+        cron = parse_cron_expression(expression)
+    except ValueError:
+        return False
+
+    return (
+        check_time.minute in cron['minutes'] and
+        check_time.hour in cron['hours'] and
+        check_time.weekday() in cron['day_of_week']
+    )
+
+
+def get_next_run_time(expression: str, from_time: Optional[datetime] = None) -> Optional[datetime]:
+    if from_time is None:
+        from_time = datetime.now()
+
+    try:
+        cron = parse_cron_expression(expression)
+    except ValueError:
+        return None
+
+    current = from_time.replace(second=0, microsecond=0)
+
+    for _ in range(60 * 24 * 7 + 1):
+        current = current + timedelta(minutes=1)
+
+        if (
+            current.minute in cron['minutes'] and
+            current.hour in cron['hours'] and
+            current.weekday() in cron['day_of_week']
+        ):
+            return current
+
+    return None
 
 
 def generate_sample_data() -> tuple[Dict[str, Template], Dict[str, Fragment]]:
@@ -884,16 +1313,21 @@ def print_warning(msg: str):
 @click.option('--data-dir', default=None, help='数据目录路径')
 def cli(data_dir):
     if data_dir:
-        global DATA_DIR, TEMPLATES_FILE, FRAGMENTS_FILE, VERSIONS_DIR, SEND_LOG_FILE, STATS_FILE
+        global DATA_DIR, TEMPLATES_FILE, FRAGMENTS_FILE, LAYOUTS_FILE, VERSIONS_DIR, SCHEDULES_FILE, SCHEDULE_HISTORY_FILE, SEND_LOG_FILE, AB_TEST_LOG_FILE, STATS_FILE
         DATA_DIR = data_dir
         TEMPLATES_FILE = os.path.join(DATA_DIR, 'templates.json')
         FRAGMENTS_FILE = os.path.join(DATA_DIR, 'fragments.json')
+        LAYOUTS_FILE = os.path.join(DATA_DIR, 'layouts.json')
         VERSIONS_DIR = os.path.join(DATA_DIR, 'versions')
+        SCHEDULES_FILE = os.path.join(DATA_DIR, 'schedules.json')
+        SCHEDULE_HISTORY_FILE = os.path.join(DATA_DIR, 'schedule_history.json')
         SEND_LOG_FILE = os.path.join(DATA_DIR, 'send_log.json')
+        AB_TEST_LOG_FILE = os.path.join(DATA_DIR, 'ab_test_log.json')
         STATS_FILE = os.path.join(DATA_DIR, 'stats.json')
         for d in [DATA_DIR, VERSIONS_DIR]:
             os.makedirs(d, exist_ok=True)
     init_sample_data()
+    load_layouts()
 
 
 @cli.group(help='模板管理')
@@ -908,7 +1342,9 @@ def template():
 @click.option('--body-file', required=False, type=click.File('r', encoding='utf-8'), help='从文件读取正文')
 @click.option('--var', 'vars_opt', multiple=True, help='变量定义: 名称:类型:required:默认值。例: user_name:string:true:')
 @click.option('--var-file', required=False, type=click.File('r', encoding='utf-8'), help='从JSON文件读取变量定义')
-def template_create(name, subject, body, body_file, vars_opt, var_file):
+@click.option('--layout', type=click.Choice(['single_column', 'two_column', 'card_style']), default=None, help='使用预置布局')
+@click.option('--add-variant', multiple=True, help='添加变体: 名称:主题:正文:权重。例: A:优惠5折:正文内容:50')
+def template_create(name, subject, body, body_file, vars_opt, var_file, layout, add_variant):
     templates = load_templates()
     if name in templates:
         print_error(f'模板 "{name}" 已存在')
@@ -938,6 +1374,24 @@ def template_create(name, subject, body, body_file, vars_opt, var_file):
                 return
             variables.append(Variable(name=var_name, type=var_type, required=required, default=default))
 
+    variants = []
+    if add_variant:
+        for v_def in add_variant:
+            parts = v_def.split(':', 3)
+            if len(parts) < 3:
+                print_error(f'变体定义格式错误: {v_def}。应为: 名称:主题:正文[:权重]')
+                return
+            v_name, v_subject, v_body = parts[0], parts[1], parts[2]
+            v_weight = 50
+            if len(parts) > 3:
+                try:
+                    v_weight = int(parts[3])
+                except ValueError:
+                    print_error(f'权重必须是数字: {parts[3]}')
+                    return
+            variants.append(Variant(name=v_name, subject=v_subject, body=v_body, weight=v_weight))
+            print_info(f'已添加变体: {v_name}')
+
     now = datetime.now().isoformat()
     template_obj = Template(
         name=name,
@@ -946,7 +1400,9 @@ def template_create(name, subject, body, body_file, vars_opt, var_file):
         variables=variables,
         created_at=now,
         updated_at=now,
-        version=1
+        version=1,
+        layout=layout,
+        variants=variants
     )
 
     templates[name] = template_obj
@@ -954,11 +1410,20 @@ def template_create(name, subject, body, body_file, vars_opt, var_file):
     save_version(template_obj)
     print_success(f'模板 "{name}" 创建成功，版本 1')
 
+    if layout:
+        layout_info = PRESET_LAYOUTS.get(layout, {})
+        print_info(f'使用布局: {layout_info.get("name", layout)}')
+
     if variables:
         click.echo(f'变量列表:')
         for v in variables:
             req = Fore.RED + '必填' if v.required else Fore.YELLOW + '可选'
             click.echo(f'  - {v.name} ({v.type}) {req} 默认: {v.default}')
+
+    if variants:
+        click.echo(f'变体列表:')
+        for v in variants:
+            click.echo(f'  - {v.name} (权重: {v.weight}%) 主题: {v.subject}')
 
 
 @template.command('list', help='列出所有模板')
@@ -1016,6 +1481,9 @@ def template_show(name, version):
     click.echo(f'{Fore.YELLOW}主题:{Style.RESET_ALL} {t.subject}')
     click.echo(f'{Fore.YELLOW}创建时间:{Style.RESET_ALL} {t.created_at}')
     click.echo(f'{Fore.YELLOW}更新时间:{Style.RESET_ALL} {t.updated_at}')
+    if t.layout:
+        layout_info = PRESET_LAYOUTS.get(t.layout, {})
+        click.echo(f'{Fore.YELLOW}布局:{Style.RESET_ALL} {layout_info.get("name", t.layout)}')
     click.echo()
 
     if t.variables:
@@ -1023,6 +1491,14 @@ def template_show(name, version):
         for v in t.variables:
             req = Fore.RED + '必填' if v.required else Fore.GREEN + '可选'
             click.echo(f'  {v.name} ({v.type}) {req} - 默认: {v.default}')
+        click.echo()
+
+    if t.variants:
+        click.echo(Fore.YELLOW + '变体列表:')
+        for v in t.variants:
+            click.echo(f'  {Fore.CYAN}{v.name}{Style.RESET_ALL} (权重: {v.weight}%)')
+            click.echo(f'    主题: {v.subject}')
+            click.echo(f'    正文: {v.body[:100]}...')
         click.echo()
 
     versions = load_versions(name)
@@ -1175,15 +1651,28 @@ def template_diff(name, version1, version2):
 @click.option('--var-file', required=False, type=click.File('r', encoding='utf-8'), help='从JSON文件读取变量')
 @click.option('--csv', required=False, type=click.Path(exists=True), help='从CSV批量读取变量')
 @click.option('--output', required=False, type=click.Path(), help='输出文件(批量模式下是目录)')
-def render(template_name, output_format, theme, vars_opt, var_file, csv, output):
+@click.option('--variant', required=False, help='使用指定变体渲染')
+def render(template_name, output_format, theme, vars_opt, var_file, csv, output, variant):
     templates = load_templates()
     fragments = load_fragments()
+    layouts = load_layouts()
 
     if template_name not in templates:
         print_error(f'模板 "{template_name}" 不存在')
         return
 
     t = templates[template_name]
+
+    if variant and not t.variants:
+        print_error(f'模板 "{template_name}" 没有定义任何变体')
+        return
+
+    if variant:
+        variant_obj = next((v for v in t.variants if v.name == variant), None)
+        if not variant_obj:
+            available = [v.name for v in t.variants]
+            print_error(f'变体 "{variant}" 不存在。可用变体: {", ".join(available)}')
+            return
 
     if csv:
         records = read_csv_records(csv)
@@ -1193,10 +1682,13 @@ def render(template_name, output_format, theme, vars_opt, var_file, csv, output)
             os.makedirs(output, exist_ok=True)
 
         for i, record in enumerate(records, 1):
-            rendered_subject, rendered_body = render_template(t, record, fragments)
+            rendered_subject, rendered_body, used_layout = render_template(t, record, fragments, variant=variant, layouts=layouts)
 
             if output_format == 'html':
-                content = markdown_to_html_email(rendered_body, rendered_subject, theme)
+                if used_layout:
+                    content = rendered_body
+                else:
+                    content = markdown_to_html_email(rendered_body, rendered_subject, theme)
                 ext = '.html'
             else:
                 content = f'主题: {rendered_subject}\n\n' + markdown_to_text(rendered_body)
@@ -1224,11 +1716,14 @@ def render(template_name, output_format, theme, vars_opt, var_file, csv, output)
                 k, val = v.split('=', 1)
                 variables[k.strip()] = val.strip()
 
-    rendered_subject, rendered_body = render_template(t, variables, fragments)
+    rendered_subject, rendered_body, used_layout = render_template(t, variables, fragments, variant=variant, layouts=layouts)
     update_stats(template_name)
 
     if output_format == 'html':
-        content = markdown_to_html_email(rendered_body, rendered_subject, theme)
+        if used_layout:
+            content = rendered_body
+        else:
+            content = markdown_to_html_email(rendered_body, rendered_subject, theme)
     else:
         content = f'主题: {rendered_subject}\n\n' + markdown_to_text(rendered_body)
 
@@ -1244,9 +1739,11 @@ def render(template_name, output_format, theme, vars_opt, var_file, csv, output)
 @click.option('--template', 'template_name', required=True, help='模板名称')
 @click.option('--var', 'vars_opt', multiple=True, help='变量值: 名称=值')
 @click.option('--var-file', required=False, type=click.File('r', encoding='utf-8'), help='从JSON文件读取变量')
-def preview(template_name, vars_opt, var_file):
+@click.option('--variant', required=False, help='使用指定变体渲染')
+def preview(template_name, vars_opt, var_file, variant):
     templates = load_templates()
     fragments = load_fragments()
+    layouts = load_layouts()
 
     if template_name not in templates:
         print_error(f'模板 "{template_name}" 不存在')
@@ -1263,7 +1760,7 @@ def preview(template_name, vars_opt, var_file):
                 k, val = v.split('=', 1)
                 variables[k.strip()] = val.strip()
 
-    rendered_subject, rendered_body = render_template(t, variables, fragments)
+    rendered_subject, rendered_body, _ = render_template(t, variables, fragments, variant=variant, layouts=layouts)
 
     terminal_width = min(80, os.get_terminal_size().columns if sys.stdout.isatty() else 80)
     separator = '=' * terminal_width
@@ -1309,15 +1806,34 @@ def preview(template_name, vars_opt, var_file):
 @click.option('--recipients', required=True, type=click.Path(exists=True), help='收件人CSV文件路径')
 @click.option('--theme', type=click.Choice(HTML_THEMES.keys()), default='business', help='HTML主题')
 @click.option('--output-dir', default=OUTPUT_DIR, help='输出目录')
-def send(template_name, recipients, theme, output_dir):
+@click.option('--variant', required=False, help='使用指定变体发送')
+@click.option('--ab-test', is_flag=True, help='A/B测试模式，按权重随机分配变体')
+def send(template_name, recipients, theme, output_dir, variant, ab_test):
     templates = load_templates()
     fragments = load_fragments()
+    layouts = load_layouts()
 
     if template_name not in templates:
         print_error(f'模板 "{template_name}" 不存在')
         return
 
     t = templates[template_name]
+
+    if ab_test and not t.variants:
+        print_error(f'模板 "{template_name}" 没有定义任何变体，无法使用A/B测试模式')
+        return
+
+    if variant and ab_test:
+        print_error('不能同时指定 --variant 和 --ab-test')
+        return
+
+    if variant:
+        variant_obj = next((v for v in t.variants if v.name == variant), None)
+        if not variant_obj:
+            available = [v.name for v in t.variants]
+            print_error(f'变体 "{variant}" 不存在。可用变体: {", ".join(available)}')
+            return
+
     records = read_csv_records(recipients)
 
     os.makedirs(output_dir, exist_ok=True)
@@ -1329,6 +1845,11 @@ def send(template_name, recipients, theme, output_dir):
 
     output_files = []
     sent_recipients = []
+    variant_stats = {}
+
+    if t.variants:
+        for v in t.variants:
+            variant_stats[v.name] = {'sent': 0, 'failed': 0}
 
     for i, record in enumerate(records, 1):
         if 'recipient_email' not in record:
@@ -1336,28 +1857,127 @@ def send(template_name, recipients, theme, output_dir):
             continue
 
         email = record['recipient_email']
+        current_variant = variant
+        if ab_test:
+            selected = select_variant_by_weight(t.variants)
+            current_variant = selected.name if selected else None
+
         try:
-            rendered_subject, rendered_body = render_template(t, record, fragments)
-            content = markdown_to_html_email(rendered_body, rendered_subject, theme)
+            rendered_subject, rendered_body, used_layout = render_template(t, record, fragments, variant=current_variant, layouts=layouts)
+            if used_layout:
+                content = rendered_body
+            else:
+                content = markdown_to_html_email(rendered_body, rendered_subject, theme)
 
             safe_email = email.replace('@', '_at_').replace('.', '_dot_')
-            out_path = os.path.join(batch_dir, f'{safe_email}.html')
+            variant_suffix = f'_{current_variant}' if current_variant else ''
+            out_path = os.path.join(batch_dir, f'{safe_email}{variant_suffix}.html')
             with open(out_path, 'w', encoding='utf-8') as f:
                 f.write(content)
 
             output_files.append(out_path)
-            sent_recipients.append(record)
+            record_with_variant = dict(record)
+            record_with_variant['_variant'] = current_variant
+            sent_recipients.append(record_with_variant)
 
-            click.echo(f'[{i}/{len(records)}] {Fore.GREEN}✓{Style.RESET_ALL} {email} → {out_path}')
+            if current_variant and current_variant in variant_stats:
+                variant_stats[current_variant]['sent'] += 1
+
+            variant_label = f' [{current_variant}]' if current_variant else ''
+            click.echo(f'[{i}/{len(records)}] {Fore.GREEN}✓{Style.RESET_ALL} {email}{variant_label} → {out_path}')
         except Exception as e:
+            if current_variant and current_variant in variant_stats:
+                variant_stats[current_variant]['failed'] += 1
             click.echo(f'[{i}/{len(records)}] {Fore.RED}✗{Style.RESET_ALL} {email} - 错误: {e}')
 
-    log_send(template_name, sent_recipients, output_files)
+    log_send(template_name, sent_recipients, output_files, variant=variant if not ab_test else None, variant_stats=variant_stats if ab_test else None)
+
+    if ab_test and variant_stats:
+        log_ab_test(template_name, variant_stats)
 
     click.echo()
     print_success(f'发送完成！成功 {len(sent_recipients)}/{len(records)} 封')
     print_info(f'输出目录: {batch_dir}')
     print_info(f'发送日志已记录')
+
+    if ab_test and variant_stats:
+        click.echo()
+        click.echo(Fore.CYAN + '=== A/B测试分配统计 ===')
+        headers = ['变体', '发送数', '失败数', '占比']
+        rows = []
+        total = sum(s['sent'] + s['failed'] for s in variant_stats.values())
+        for v_name, stats in variant_stats.items():
+            sent = stats['sent']
+            failed = stats['failed']
+            count = sent + failed
+            percentage = (count / total * 100) if total > 0 else 0
+            rows.append([
+                Fore.CYAN + v_name + Style.RESET_ALL,
+                sent,
+                failed if failed > 0 else '-',
+                f'{percentage:.1f}%'
+            ])
+        click.echo(tabulate(rows, headers=headers, tablefmt='pretty'))
+
+
+@cli.command('ab-report', help='查看A/B测试发送统计报告')
+@click.option('--template', 'template_name', required=False, help='指定模板名称，不指定则显示所有')
+def ab_report(template_name):
+    ab_log = load_json(AB_TEST_LOG_FILE, [])
+    if not ab_log:
+        print_info('没有A/B测试记录。')
+        return
+
+    if template_name:
+        ab_log = [entry for entry in ab_log if entry['template'] == template_name]
+        if not ab_log:
+            print_info(f'模板 "{template_name}" 没有A/B测试记录。')
+            return
+
+    all_variant_stats = {}
+    for entry in ab_log:
+        tpl = entry['template']
+        if tpl not in all_variant_stats:
+            all_variant_stats[tpl] = {}
+        for v_name, stats in entry['variant_stats'].items():
+            if v_name not in all_variant_stats[tpl]:
+                all_variant_stats[tpl][v_name] = {'sent': 0, 'failed': 0}
+            all_variant_stats[tpl][v_name]['sent'] += stats.get('sent', 0)
+            all_variant_stats[tpl][v_name]['failed'] += stats.get('failed', 0)
+
+    for tpl_name, variant_stats in all_variant_stats.items():
+        click.echo(Fore.CYAN + f'=== 模板: {tpl_name} ===')
+        headers = ['变体', '总发送', '成功', '失败', '占比', '成功率']
+        rows = []
+        total = sum(s['sent'] + s['failed'] for s in variant_stats.values())
+        for v_name, stats in variant_stats.items():
+            sent = stats['sent']
+            failed = stats['failed']
+            count = sent + failed
+            percentage = (count / total * 100) if total > 0 else 0
+            success_rate = (sent / count * 100) if count > 0 else 0
+            rows.append([
+                Fore.CYAN + v_name + Style.RESET_ALL,
+                count,
+                sent,
+                failed if failed > 0 else '-',
+                f'{percentage:.1f}%',
+                f'{success_rate:.1f}%'
+            ])
+        click.echo(tabulate(rows, headers=headers, tablefmt='pretty'))
+        click.echo()
+
+    total_sent = sum(
+        s['sent']
+        for tpl_stats in all_variant_stats.values()
+        for s in tpl_stats.values()
+    )
+    total_failed = sum(
+        s['failed']
+        for tpl_stats in all_variant_stats.values()
+        for s in tpl_stats.values()
+    )
+    click.echo(Fore.YELLOW + f'总计: 发送 {total_sent + total_failed} 封，成功 {total_sent} 封，失败 {total_failed} 封')
 
 
 @cli.group(help='片段管理')
@@ -1652,6 +2272,338 @@ def stats_cmd(template_name, send_log):
     total_uses = sum(s['use_count'] for s in stats.values())
     click.echo()
     click.echo(f'总模板数: {len(templates)} | 总片段数: {len(load_fragments())} | 总使用次数: {total_uses}')
+
+
+def execute_schedule(schedule: Schedule) -> Dict:
+    templates = load_templates()
+    if schedule.template_name not in templates:
+        return {'success': False, 'error': f'模板 "{schedule.template_name}" 不存在'}
+
+    if not os.path.exists(schedule.recipients_csv):
+        return {'success': False, 'error': f'收件人CSV文件不存在: {schedule.recipients_csv}'}
+
+    variables = {}
+    if schedule.variables_source and os.path.exists(schedule.variables_source):
+        try:
+            with open(schedule.variables_source, 'r', encoding='utf-8') as f:
+                variables = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            pass
+
+    records = read_csv_records(schedule.recipients_csv)
+    fragments = load_fragments()
+    layouts = load_layouts()
+    t = templates[schedule.template_name]
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    batch_dir = os.path.join(OUTPUT_DIR, f'schedule_{schedule.id}_{timestamp}')
+    os.makedirs(batch_dir, exist_ok=True)
+
+    update_stats(schedule.template_name)
+
+    sent_count = 0
+    failed_count = 0
+    variant_stats = {}
+
+    if t.variants:
+        for v in t.variants:
+            variant_stats[v.name] = {'sent': 0, 'failed': 0}
+
+    for i, record in enumerate(records, 1):
+        if 'recipient_email' not in record:
+            failed_count += 1
+            continue
+
+        email = record['recipient_email']
+        current_variant = schedule.variant
+        if schedule.ab_test:
+            selected = select_variant_by_weight(t.variants)
+            current_variant = selected.name if selected else None
+
+        try:
+            record_vars = dict(variables)
+            record_vars.update(record)
+            rendered_subject, rendered_body, used_layout = render_template(t, record_vars, fragments, variant=current_variant, layouts=layouts)
+            if used_layout:
+                content = rendered_body
+            else:
+                content = markdown_to_html_email(rendered_body, rendered_subject, schedule.theme)
+
+            safe_email = email.replace('@', '_at_').replace('.', '_dot_')
+            variant_suffix = f'_{current_variant}' if current_variant else ''
+            out_path = os.path.join(batch_dir, f'{safe_email}{variant_suffix}.html')
+            with open(out_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+            sent_count += 1
+            if current_variant and current_variant in variant_stats:
+                variant_stats[current_variant]['sent'] += 1
+        except Exception:
+            failed_count += 1
+            if current_variant and current_variant in variant_stats:
+                variant_stats[current_variant]['failed'] += 1
+
+    if schedule.ab_test and variant_stats:
+        log_ab_test(schedule.template_name, variant_stats)
+
+    result = {
+        'success': True,
+        'timestamp': datetime.now().isoformat(),
+        'schedule_id': schedule.id,
+        'template': schedule.template_name,
+        'total_recipients': len(records),
+        'sent': sent_count,
+        'failed': failed_count,
+        'output_dir': batch_dir,
+        'variant_stats': variant_stats if schedule.ab_test else None
+    }
+
+    history = load_schedule_history()
+    history.append(result)
+    save_schedule_history(history)
+
+    schedules = load_schedules()
+    if schedule.id in schedules:
+        schedules[schedule.id].last_run = result['timestamp']
+        schedules[schedule.id].next_run = get_next_run_time(schedule.cron_expression).isoformat() if get_next_run_time(schedule.cron_expression) else None
+        save_schedules(schedules)
+
+    return result
+
+
+@cli.group(help='定时任务管理')
+def schedule():
+    pass
+
+
+@schedule.command('list', help='列出所有定时任务')
+def schedule_list():
+    schedules = load_schedules()
+    if not schedules:
+        print_info('没有定时任务。')
+        return
+
+    headers = ['ID', '名称', '模板', 'Cron', '下次执行', '状态']
+    rows = []
+    for sid, s in sorted(schedules.items()):
+        next_run = get_next_run_time(s.cron_expression)
+        next_run_str = next_run.strftime('%Y-%m-%d %H:%M') if next_run else '-'
+        status = Fore.GREEN + '启用' if s.enabled else Fore.RED + '禁用'
+        rows.append([
+            Fore.CYAN + sid + Style.RESET_ALL,
+            s.name,
+            s.template_name,
+            s.cron_expression,
+            next_run_str,
+            status
+        ])
+
+    click.echo(tabulate(rows, headers=headers, tablefmt='pretty'))
+
+
+@schedule.command('add', help='添加定时任务')
+@click.option('--id', 'schedule_id', required=True, help='任务ID')
+@click.option('--name', required=True, help='任务名称')
+@click.option('--template', 'template_name', required=True, help='模板名称')
+@click.option('--recipients', required=True, type=click.Path(exists=True), help='收件人CSV文件路径')
+@click.option('--cron', required=True, help='Cron表达式 (分钟 小时 星期)，如 "0 9 *" 表示每天9点')
+@click.option('--vars', 'variables_source', required=False, default='', help='变量JSON文件路径')
+@click.option('--variant', required=False, help='使用指定变体')
+@click.option('--ab-test', is_flag=True, help='启用A/B测试模式')
+@click.option('--theme', type=click.Choice(HTML_THEMES.keys()), default='business', help='HTML主题')
+def schedule_add(schedule_id, name, template_name, recipients, cron, variables_source, variant, ab_test, theme):
+    schedules = load_schedules()
+    templates = load_templates()
+
+    if schedule_id in schedules:
+        print_error(f'任务ID "{schedule_id}" 已存在')
+        return
+
+    if template_name not in templates:
+        print_error(f'模板 "{template_name}" 不存在')
+        return
+
+    if ab_test and variant:
+        print_error('不能同时指定 --variant 和 --ab-test')
+        return
+
+    if ab_test and not templates[template_name].variants:
+        print_error(f'模板 "{template_name}" 没有定义变体，无法使用A/B测试')
+        return
+
+    try:
+        parse_cron_expression(cron)
+    except ValueError as e:
+        print_error(str(e))
+        return
+
+    now = datetime.now().isoformat()
+    next_run = get_next_run_time(cron)
+
+    schedule_obj = Schedule(
+        id=schedule_id,
+        name=name,
+        template_name=template_name,
+        recipients_csv=os.path.abspath(recipients),
+        cron_expression=cron,
+        variables_source=os.path.abspath(variables_source) if variables_source else '',
+        variant=variant,
+        ab_test=ab_test,
+        theme=theme,
+        enabled=True,
+        created_at=now,
+        last_run=None,
+        next_run=next_run.isoformat() if next_run else None
+    )
+
+    schedules[schedule_id] = schedule_obj
+    save_schedules(schedules)
+    print_success(f'定时任务 "{name}" 添加成功')
+    print_info(f'Cron: {cron}')
+    if next_run:
+        print_info(f'下次执行时间: {next_run.strftime("%Y-%m-%d %H:%M:%S")}')
+
+
+@schedule.command('delete', help='删除定时任务')
+@click.argument('schedule_id')
+@click.option('--force', is_flag=True, help='不提示确认')
+def schedule_delete(schedule_id, force):
+    schedules = load_schedules()
+
+    if schedule_id not in schedules:
+        print_error(f'任务 "{schedule_id}" 不存在')
+        return
+
+    s = schedules[schedule_id]
+    if not force:
+        if not click.confirm(f'确定要删除任务 "{s.name}" 吗？'):
+            print_info('操作已取消')
+            return
+
+    del schedules[schedule_id]
+    save_schedules(schedules)
+    print_success(f'任务 "{s.name}" 已删除')
+
+
+@schedule.command('run', help='手动触发执行定时任务')
+@click.argument('schedule_id', required=False)
+@click.option('--all', is_flag=True, help='执行所有匹配cron的任务')
+@click.option('--force', is_flag=True, help='忽略cron匹配，强制执行')
+def schedule_run(schedule_id, all, force):
+    schedules = load_schedules()
+
+    if not all and not schedule_id:
+        print_error('请指定任务ID或使用 --all 参数')
+        return
+
+    check_time = datetime.now()
+
+    if all:
+        for sid, s in schedules.items():
+            if not s.enabled:
+                continue
+            if force or match_cron(s.cron_expression, check_time):
+                print_info(f'执行任务: {s.name} ({sid})')
+                result = execute_schedule(s)
+                if result['success']:
+                    print_success(f'执行完成: 发送 {result["sent"]}/{result["total_recipients"]} 封')
+                else:
+                    print_error(f'执行失败: {result["error"]}')
+                click.echo()
+    else:
+        if schedule_id not in schedules:
+            print_error(f'任务 "{schedule_id}" 不存在')
+            return
+
+        s = schedules[schedule_id]
+        if not s.enabled:
+            print_error(f'任务 "{schedule_id}" 已禁用')
+            return
+
+        if not force and not match_cron(s.cron_expression, check_time):
+            print_warning(f'当前时间 ({check_time.strftime("%Y-%m-%d %H:%M")}) 不匹配 cron 表达式 "{s.cron_expression}"')
+            print_info('使用 --force 参数强制执行')
+            return
+
+        print_info(f'执行任务: {s.name} ({schedule_id})')
+        result = execute_schedule(s)
+        if result['success']:
+            print_success(f'执行完成: 发送 {result["sent"]}/{result["total_recipients"]} 封')
+            print_info(f'输出目录: {result["output_dir"]}')
+            if result.get('variant_stats'):
+                click.echo()
+                click.echo(Fore.CYAN + '=== A/B测试统计 ===')
+                headers = ['变体', '发送', '失败']
+                rows = []
+                for v_name, stats in result['variant_stats'].items():
+                    rows.append([Fore.CYAN + v_name + Style.RESET_ALL, stats['sent'], stats['failed'] if stats['failed'] > 0 else '-'])
+                click.echo(tabulate(rows, headers=headers, tablefmt='pretty'))
+        else:
+            print_error(f'执行失败: {result["error"]}')
+
+
+@schedule.command('history', help='查看执行历史')
+@click.option('--schedule', 'schedule_id', required=False, help='指定任务ID')
+@click.option('--limit', type=int, default=20, help='显示最近N条记录')
+def schedule_history(schedule_id, limit):
+    history = load_schedule_history()
+    if not history:
+        print_info('没有执行记录。')
+        return
+
+    if schedule_id:
+        history = [h for h in history if h.get('schedule_id') == schedule_id]
+        if not history:
+            print_info(f'任务 "{schedule_id}" 没有执行记录。')
+            return
+
+    history = sorted(history, key=lambda x: x.get('timestamp', ''), reverse=True)[:limit]
+
+    headers = ['时间', '任务ID', '模板', '总数', '成功', '失败']
+    rows = []
+    for entry in history:
+        rows.append([
+            entry.get('timestamp', '')[:19].replace('T', ' '),
+            Fore.CYAN + entry.get('schedule_id', '') + Style.RESET_ALL,
+            entry.get('template', ''),
+            entry.get('total_recipients', 0),
+            Fore.GREEN + str(entry.get('sent', 0)) + Style.RESET_ALL,
+            Fore.RED + str(entry.get('failed', 0)) + Style.RESET_ALL if entry.get('failed', 0) > 0 else '-'
+        ])
+
+    click.echo(tabulate(rows, headers=headers, tablefmt='pretty'))
+
+    total_sent = sum(h.get('sent', 0) for h in history)
+    total_failed = sum(h.get('failed', 0) for h in history)
+    click.echo()
+    click.echo(Fore.YELLOW + f'总计: 执行 {len(history)} 次，发送 {total_sent + total_failed} 封，成功 {total_sent} 封，失败 {total_failed} 封')
+
+
+@schedule.command('enable', help='启用定时任务')
+@click.argument('schedule_id')
+def schedule_enable(schedule_id):
+    schedules = load_schedules()
+    if schedule_id not in schedules:
+        print_error(f'任务 "{schedule_id}" 不存在')
+        return
+
+    schedules[schedule_id].enabled = True
+    save_schedules(schedules)
+    print_success(f'任务 "{schedules[schedule_id].name}" 已启用')
+
+
+@schedule.command('disable', help='禁用定时任务')
+@click.argument('schedule_id')
+def schedule_disable(schedule_id):
+    schedules = load_schedules()
+    if schedule_id not in schedules:
+        print_error(f'任务 "{schedule_id}" 不存在')
+        return
+
+    schedules[schedule_id].enabled = False
+    save_schedules(schedules)
+    print_success(f'任务 "{schedules[schedule_id].name}" 已禁用')
 
 
 if __name__ == '__main__':
